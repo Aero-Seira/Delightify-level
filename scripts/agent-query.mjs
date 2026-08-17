@@ -22,7 +22,7 @@
  *   LLM_ACTIVE_PROFILE=openai-api|ollama-local 指定激活模式
  * 注意：embed build/search 会把物品名称等文本发给激活的 provider。
  *
- * 文档：docs/agent.md
+ * 文档：AGENT.md
  */
 import { createClient } from '@libsql/client';
 import * as fs from 'node:fs';
@@ -41,7 +41,7 @@ function ok(data) {
 function fail(error, usage = false) {
   process.stdout.write(JSON.stringify({ ok: false, error: String(error) }, null, 2) + '\n');
   if (usage) {
-    process.stderr.write('用法见 scripts/agent-query.mjs 头部注释或 docs/guides/agent-data-access.md\n');
+    process.stderr.write('用法见 scripts/agent-query.mjs 头部注释或 AGENT.md\n');
   }
   process.exit(1);
 }

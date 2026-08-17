@@ -1,7 +1,7 @@
 /**
  * Graph 查询
  *
- * 供 CLI（scripts/agent-query.mjs）与后续 IDE 内入口复用的只读查询。
+ * 供 CLI（scripts/agent-query.mjs）复用的只读查询。
  * 规模假设：节点 ~10⁴–10⁵、边 ~10⁵，逐层 SQL BFS 足够，不做全图内存加载。
  */
 

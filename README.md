@@ -2,7 +2,7 @@
 
 整合包的**运行时世界**：物品、配方、tag、战利品的最终态，加上图谱、向量检索，以及可预览、可撤销的确定性改包工具。给外部 agent 的 harness 用，不是 IDE，也不是聊天框。
 
-规划与改手写脚本发生在 Claude Code / Cursor / Codex 里。本仓负责把游戏里真正加载出来的包变成可查询的事实。
+规划与改手写脚本发生在 Claude Code / Cursor / Codex 等 harness 里。本仓负责把游戏里真正加载出来的包变成可查询的事实。
 
 ## 仓库结构
 
@@ -37,6 +37,7 @@ node scripts/agent-query.mjs <实例路径> embed search "铜锭" --top 10
 
 ## 文档
 
+- [`AGENT.md`](AGENT.md) — 给外部 agent 的入口（先读这个）
 - [`docs/world.md`](docs/world.md) — 世界、工具、边界
-- [`docs/agent.md`](docs/agent.md) — CLI 与查询纪律
+- [`docs/agent.md`](docs/agent.md) — CLI 参数表
 - [`docs/contract.md`](docs/contract.md) — 导出快照 schema
