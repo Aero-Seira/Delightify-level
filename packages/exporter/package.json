@@ -1,0 +1,14 @@
+{
+  "name": "@delightify/exporter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NeoForge runtime final-state data exporter for Delightify.",
+  "scripts": {
+    "gradle": "node ../../scripts/run-gradle.mjs .",
+    "exporter:build": "node ../../scripts/run-gradle.mjs . build",
+    "exporter:compile": "node ../../scripts/run-gradle.mjs . compileJava",
+    "exporter:runClient": "node ../../scripts/run-gradle.mjs . runClient",
+    "exporter:runServer": "node ../../scripts/run-gradle.mjs . runServer",
+    "exporter:clean": "node ../../scripts/run-gradle.mjs . clean"
+  }
+}
