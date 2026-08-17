@@ -9,10 +9,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 /**
- * ModPack IDE Exporter —— 主入口（NeoForge 1.21.1）。
+ * Delightify-level Exporter —— 主入口（NeoForge 1.21.1）。
  *
  * 职责：注册 /mpide_export 命令。导出逻辑见 {@link io.github.aeroseira.mpide_exporter.export.ExporterService}。
- * 契约见仓库外 docs/exporter-contract-v1.md（ModPack IDE 主仓）。
+ * 契约见仓库 docs/contract.md。
  */
 @Mod(ModpackIdeExporter.MOD_ID)
 public final class ModpackIdeExporter {

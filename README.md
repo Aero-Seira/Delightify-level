@@ -1,39 +1,42 @@
 # Delightify-level
 
-游戏外的**整合包世界知识平台**。把 Minecraft 实例的运行时最终态做成外部 agent 能查、能引用、能谨慎调用的知识和工具。规划与改文件交给作者正在用的 harness（Claude Code、Cursor、Codex 等）。
+整合包的**运行时世界**：物品、配方、tag、战利品的最终态，加上图谱、向量检索，以及可预览、可撤销的确定性改包工具。给外部 agent 的 harness 用，不是 IDE，也不是聊天框。
 
-Delightify-level 不是 IDE，也不是又一个聊天框。
+规划与改手写脚本发生在 Claude Code / Cursor / Codex 里。本仓负责把游戏里真正加载出来的包变成可查询的事实。
 
-## 它提供什么
+## 仓库结构
 
-1. **世界**：游戏内 `/mpide_export dump` → 导入 `<实例>/.delightify-level/project.db`（物品、配方、tag、战利品）+ 游戏事实图谱；授权后构建物品向量。
-2. **工具**：图谱/向量检索、影响面、unify 查询、引擎 dry-run、KubeJS 受管预览/写出/撤销。
-3. **接口**：先用 CLI。MCP 与 Skill 按同一套函数往后加。
+| 路径 | 作用 |
+|---|---|
+| `packages/exporter` | NeoForge 1.21.1 游戏内导出 mod |
+| `packages/core` | 导入、图谱、向量、引擎、KubeJS 受管写出 |
+| `packages/shared` | 跨包类型 |
+| `scripts/agent-query.mjs` | 外部 agent 查询入口（JSON） |
 
-## 和 Delightify-IDE 的关系
+项目库：`<实例>/.delightify-level/project.db`。
 
-旧仓 [Delightify-IDE](../Delightify-IDE) 是 Electron 改包 IDE / 自建 Agent 试验。本仓只搬走可复用的世界层与确定性引擎，文档重写。旧仓冻结，不再当主线。来源对照见 [`docs/FROM-IDE.md`](docs/FROM-IDE.md)。
-
-## 命令
+## 用法
 
 ```bash
 pnpm install
 pnpm build
 
-# 游戏内导出器（需 Java 21）
+# 导出器（需 Java 21）
 pnpm exporter:build
-pnpm exporter:runClient   # 进档后 /mpide_export dump
+pnpm exporter:runClient
+# 进档后：/mpide_export dump
+# 快照：<实例>/mpide-exporter/export.sqlite
 
-# 查询已导入的世界库（IDE 不必启动）
+# 查询（须已导入快照）
 node scripts/agent-query.mjs <实例路径> graph stats
 node scripts/agent-query.mjs <实例路径> graph usages minecraft:copper_ingot
 node scripts/agent-query.mjs <实例路径> embed search "铜锭" --top 10
 ```
 
-摄入（把 `mpide-exporter/export.sqlite` 打进 project.db）目前仍以库函数 `importModData` 提供，CLI 封装随后补。
+摄入快照目前走 `@delightify/core` 的 `importModData`，尚未接到 `agent-query`。
 
 ## 文档
 
-- [`docs/world.md`](docs/world.md) — 产品方向
-- [`docs/agent.md`](docs/agent.md) — 外部 agent 怎么用
-- [`docs/contract.md`](docs/contract.md) — exporter SQLite 契约
+- [`docs/world.md`](docs/world.md) — 世界、工具、边界
+- [`docs/agent.md`](docs/agent.md) — CLI 与查询纪律
+- [`docs/contract.md`](docs/contract.md) — 导出快照 schema

@@ -1,9 +1,9 @@
 # CLAUDE.md
 
-Delightify-level 是整合包**世界知识平台**：运行时最终态 + 图谱/向量 + 确定性工具，给外部 agent 的 harness 用。不是 IDE，不要在本仓做 Electron 工作台或自建执行 Agent。
+Delightify-level 把 Minecraft 整合包的**运行时最终态**做成可查询世界，供外部 agent 使用。
 
-- 产品说明：`docs/world.md`
-- Agent 用法：`docs/agent.md`
-- 从旧仓搬了什么：`docs/FROM-IDE.md`
-
-可改：CLI、导入封装、MCP/Skill、图谱/向量/引擎。不要把 Intent Spec / Gate / 工作台加回来。
+- 读 [`docs/world.md`](docs/world.md) 和 [`docs/agent.md`](docs/agent.md)。
+- 查询走 `scripts/agent-query.mjs`，stdout 为 JSON。
+- 先查世界再提议改动；查询结果里没有的 id 当作幻觉丢掉。
+- 写盘只碰 Delightify-level 受管文件（`@delightify-level-generated`），先 preview 再 export。
+- 本仓不做桌面 IDE，不做应用内 Agent 编排。可做：CLI、导入、MCP/Skill、图谱/向量/引擎。

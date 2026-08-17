@@ -4,7 +4,7 @@
  *
  * 查询 Delightify-level 项目库（<projectPath>/.delightify-level/project.db）中的
  * 游戏事实图谱与物品向量，stdout 输出 JSON：{ ok, data?, error? }，
- * 退出码非 0 即失败。IDE 无需启动。使用前需先 pnpm build。
+ * 退出码非 0 即失败。使用前需 pnpm build。
  *
  * 用法：
  *   node scripts/agent-query.mjs <projectPath> graph stats
@@ -16,7 +16,7 @@
  *   node scripts/agent-query.mjs <projectPath> embed search <文本> [--top n]
  *   node scripts/agent-query.mjs <projectPath> embed similar <itemId> [--top n]
  *
- * embed 子命令经环境变量配置 provider（与 IDE LLM 服务同一套）：
+ * embed 子命令经环境变量配置 provider：
  *   OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_EMBEDDING_MODEL（默认 text-embedding-3-small）
  *   OLLAMA_ENDPOINT / OLLAMA_EMBEDDING_MODEL（默认 nomic-embed-text，完全本地）
  *   LLM_ACTIVE_PROFILE=openai-api|ollama-local 指定激活模式

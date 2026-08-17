@@ -1,7 +1,7 @@
 /**
  * 数据采集器（sources）—— 各表一类，从游戏最终态读出纯数据对象。
  *
- * 已实现（对照 docs/exporter-contract-v1.md）：
+ * 已实现（对照 docs/contract.md）：
  *  - ModListSource        → mods
  *  - ItemRegistrySource   → items (+ 确定性事实/默认组件) + item_creative_tabs + blocks
  *  - ItemTagSource        → item_tags（已解析的最终成员）

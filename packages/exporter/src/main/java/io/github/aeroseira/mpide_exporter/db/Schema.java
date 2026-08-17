@@ -3,13 +3,12 @@ package io.github.aeroseira.mpide_exporter.db;
 import java.util.List;
 
 /**
- * 导出库 schema —— 契约（v1 起，当前 v3；见 ModPack IDE 主仓 docs/exporter-contract-v1.md）。
- *
- * 这是 exporter ↔ IDE 的接口。改表 = 改契约：必须同步 IDE importer 并升 SCHEMA_VERSION。
+ * 导出库 schema，当前 SCHEMA_VERSION = 3。见仓库 docs/contract.md。
+ * 改表必须同步 importer 并升高版本号。
  */
 public final class Schema {
 
-    /** 新契约从 1 起（与旧 Delightify v4 不兼容，是全新命名空间）。v2 新增 loot_tables / loot_bindings；v3 新增 recipes.input_width / input_height。 */
+    /** 3：含 loot_tables / loot_bindings，以及 recipes.input_width / input_height。 */
     public static final int SCHEMA_VERSION = 3;
 
     private Schema() {}
