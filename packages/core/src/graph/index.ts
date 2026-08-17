@@ -23,3 +23,20 @@ export {
   type NeighborsResult,
   type PathResult,
 } from './query';
+export {
+  closureFrom,
+  rulesFor,
+  groupByRule,
+  nodeTypeOf,
+  normalizeSeedId,
+  CLOSURE_POLICIES,
+  type ClosureOptions,
+  type ClosurePolicyName,
+  type ClosureResult,
+  type FrontierEntry,
+  type NearMiss,
+  type PolicyLimits,
+  type PolicySpec,
+  type TraversalDirection,
+  type TraversalRule,
+} from './closure';

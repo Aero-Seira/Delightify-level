@@ -9,6 +9,7 @@
  * 用法：
  *   node scripts/agent-query.mjs <projectPath> graph stats
  *   node scripts/agent-query.mjs <projectPath> graph usages <itemId>
+ *   node scripts/agent-query.mjs <projectPath> graph closure <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept] [--max-iterations n] [--max-nodes n] [--max-fanout n] [--near-misses n] [--detail ids|full]
  *   node scripts/agent-query.mjs <projectPath> graph neighbors <nodeId> [--relation member_of|input_of|output_of|obtained_from] [--direction out|in|both] [--depth 1-3]
  *   node scripts/agent-query.mjs <projectPath> graph path <fromNodeId> <toNodeId> [--max-depth n]
  *   node scripts/agent-query.mjs <projectPath> graph rebuild
@@ -22,13 +23,14 @@
  *   LLM_ACTIVE_PROFILE=openai-api|ollama-local 指定激活模式
  * 注意：embed build/search 会把物品名称等文本发给激活的 provider。
  *
- * 文档：AGENT.md
+ * 文档：docs/using.md（工作方式）、docs/cli.md（参数表）
  */
 import { createClient } from '@libsql/client';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { rebuildGraph } from '../packages/core/dist/graph/build.js';
 import { graphStats, itemUsages, graphNeighbors, graphPath } from '../packages/core/dist/graph/query.js';
+import { closureFrom } from '../packages/core/dist/graph/closure.js';
 import { buildEmbeddings, searchByText, searchSimilarItems } from '../packages/core/dist/embedding/index.js';
 import { createLLMService } from '../packages/core/dist/llm/index.js';
 
@@ -69,6 +71,14 @@ function normalizeNodeId(id) {
   return NODE_PREFIXES.some(p => id.startsWith(p)) ? id : `item:${id}`;
 }
 
+/** 数值选项：未给出为 undefined（交给 core 用默认值），给了就必须是数字 */
+function numberFlag(flags, key) {
+  if (flags[key] === undefined) return undefined;
+  const value = Number(flags[key]);
+  if (!Number.isFinite(value)) fail(`选项 --${key} 需要数字，收到 ${flags[key]}`, true);
+  return value;
+}
+
 async function main() {
   const [projectPath, domain, command, ...rest] = process.argv.slice(2);
   if (!projectPath || !domain || !command) fail('参数不足：<projectPath> <graph|embed> <command>', true);
@@ -96,6 +106,19 @@ async function main() {
         const itemId = positional[0];
         if (!itemId) fail('graph usages 需要 <itemId>', true);
         ok(await itemUsages(db, itemId));
+      } else if (command === 'closure') {
+        if (positional.length === 0) fail('graph closure 需要至少一个 <seed>', true);
+        if (flags.detail !== undefined && flags.detail !== 'ids' && flags.detail !== 'full') {
+          fail('选项 --detail 只能是 ids 或 full', true);
+        }
+        ok(await closureFrom(db, positional, {
+          policy: flags.policy,
+          maxIterations: numberFlag(flags, 'max-iterations'),
+          maxNodes: numberFlag(flags, 'max-nodes'),
+          maxFanout: numberFlag(flags, 'max-fanout'),
+          nearMissLimit: numberFlag(flags, 'near-misses'),
+          includeNodeDetails: flags.detail === 'full',
+        }));
       } else if (command === 'neighbors') {
         const nodeId = positional[0];
         if (!nodeId) fail('graph neighbors 需要 <nodeId>', true);

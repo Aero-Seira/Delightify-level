@@ -67,7 +67,8 @@ async function edgesTo(client: Client, nodeId: string, relation?: string): Promi
   return result.rows as unknown as EdgeRow[];
 }
 
-async function loadNodes(client: Client, nodeIds: string[]): Promise<Map<string, GraphNodeRow>> {
+/** 批量补齐节点行（分块 500 避开占位符上限）。closure.ts 复用，不从包外导出。 */
+export async function loadNodes(client: Client, nodeIds: readonly string[]): Promise<Map<string, GraphNodeRow>> {
   const map = new Map<string, GraphNodeRow>();
   for (let i = 0; i < nodeIds.length; i += 500) {
     const chunk = nodeIds.slice(i, i + 500);

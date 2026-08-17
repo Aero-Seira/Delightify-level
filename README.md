@@ -44,7 +44,9 @@ node scripts/agent-query.mjs <实例路径> embed search "铜锭" --top 10
 
 ## 文档
 
-- [`AGENT.md`](AGENT.md) — 给外部 agent 的入口（先读这个）
+- [`docs/design.md`](docs/design.md) — 要解决什么问题、架构、路线图（**先读这个**）
+- [`AGENT.md`](AGENT.md) — 开发本仓库的 agent 入口
+- [`docs/using.md`](docs/using.md) — 在整合包实例上干活的 agent 入口
 - [`docs/world.md`](docs/world.md) — 世界、工具、边界
-- [`docs/agent.md`](docs/agent.md) — CLI 参数表
+- [`docs/cli.md`](docs/cli.md) — CLI 参数表
 - [`docs/contract.md`](docs/contract.md) — 导出快照 schema

@@ -1,110 +1,99 @@
 # AGENT.md
 
-给在本仓或作者整合包实例上工作的外部 agent。先读本文，再动手。
+给**开发本仓库**的 agent。先读本文，再动手。
 
-Delightify-level 提供整合包的**运行时最终态**（游戏加载完之后的物品、配方、tag、战利品），以及图谱和向量检索。规划、改手写脚本、和作者确认，在你自己的 harness 里做。不要在本仓实现聊天框或桌面 IDE。
+> 如果你的任务是在作者的整合包实例上查询和改包，读 [`docs/using.md`](docs/using.md)，不是本文。
 
-细节：[`docs/world.md`](docs/world.md)（数据从哪来）、[`docs/contract.md`](docs/contract.md)（快照表）、[`docs/agent.md`](docs/agent.md)（CLI 参数表）。
+## 1. 这是什么
 
-## 1. 先确认世界在不在
+Delightify-level 把一个 Minecraft 整合包在**游戏里加载完成后的最终状态**做成本地库，并在其上提供确定性检索与变更预览，供外部 agent 使用。
 
-`projectPath` 必须是 Minecraft **实例根**（里面有 `mods/`），不是本 git 仓库根。
+要理解在做什么、为什么这么做，读 [`docs/design.md`](docs/design.md)。一句话版本：**核心问题是召回不是精确率**——模型不乱编，但它和作者都不知道包里到底有什么，于是漏。所有设计都围绕"找全，且找不全时能自知"。
 
-| 路径 | 含义 |
-|---|---|
-| `<projectPath>/dl-exporter/export.sqlite` | 游戏内 `/dl_export dump` 的快照。没有它就无法导入 |
-| `<projectPath>/.delightify-level/project.db` | 已导入的世界库。没有它，查询会失败 |
-
-没有快照：告诉作者把 exporter 放进 `mods/`，进档执行 `/dl_export dump`。  
-有快照、无 `project.db`：导入尚未接到 CLI，用 `@delightify/core` 的 `importModData({ projectPath })`（先 `pnpm build`）。不要手写插入事实表。
-
-查询前在本仓根执行过 `pnpm build`。
-
-## 2. 查询协议
+## 2. 环境
 
 ```bash
-node scripts/agent-query.mjs <projectPath> <graph|embed> <命令> [参数]
+pnpm install
+pnpm build          # 只构建 shared + core，产物在 dist/
+pnpm typecheck      # 唯一的自动化校验手段
 ```
 
-- stdout **只有** JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。
-- 先看 `ok`，再读 `data`。失败时退出码非 0。
-- 不要把 `project.db` 整库或 `SELECT * FROM items` 的结果塞进上下文。
+- Node ≥ 18，pnpm ≥ 9。exporter 需 **Java 21**，走 `pnpm exporter:build` / `exporter:runClient`。
+- `scripts/agent-query.mjs` **直接 import `packages/core/dist/`**。改了 core 不 `pnpm build`，CLI 跑的是旧代码。这是最常见的自坑方式。
+- **没有测试框架**。改动靠 `pnpm typecheck` 加手动跑 CLI 验证。新增确定性算法（尤其闭包扩张）时，优先写成纯函数并留可断言的输入输出，为将来接测试留口子。
 
-### graph（本地，导入后即可用）
+## 3. 代码地图
 
-```bash
-node scripts/agent-query.mjs <p> graph stats
-node scripts/agent-query.mjs <p> graph usages <itemId>
-node scripts/agent-query.mjs <p> graph neighbors <nodeId> [--depth 1-3] [--relation member_of|input_of|output_of|obtained_from] [--direction out|in|both]
-node scripts/agent-query.mjs <p> graph path <from> <to> [--max-depth n]
-node scripts/agent-query.mjs <p> graph rebuild
-```
-
-节点：`item:<id>`、`tag:<id>`、`recipe:<id>`、`loot:<category>:<sourceId>`。`neighbors` / `path` 可省略 `item:`。
-
-边：`member_of`（物品→tag）、`input_of`（物品/tag→配方）、`output_of`（物品→配方）、`obtained_from`（物品→战利品来源）。
-
-`usages` 一次给出所属 tag、作为输入/输出的配方、获取来源。改某个物品前先跑它。
-
-### embed（会把物品名发给 provider）
-
-只在作者允许时 `embed build`。未授权不要构建。
-
-```bash
-node scripts/agent-query.mjs <p> embed build
-node scripts/agent-query.mjs <p> embed search "<自然语言>" [--top n]
-node scripts/agent-query.mjs <p> embed similar <itemId> [--top n]
-```
-
-作者说「铜锭」「面食」时用 `search`，不要猜 `thermal:copper_ingot`。跨 mod 同名/近义用 `similar`。
-
-环境变量：`OPENAI_API_KEY` + 可选 `OPENAI_BASE_URL` / `OPENAI_EMBEDDING_MODEL`；或 `OLLAMA_ENDPOINT` / `OLLAMA_EMBEDDING_MODEL`。`LLM_ACTIVE_PROFILE=openai-api|ollama-local` 强制选用。
-
-## 3. 按任务选命令
-
-| 作者意图 | 做法 |
+| 路径 | 职责 |
 |---|---|
-| 「有哪些铜锭」 | `embed search "铜锭"`，再用 `graph usages` 核对每个 id |
-| 「换成面粉会动谁」 | `graph usages <itemId>`；跨步关系用 `neighbors --depth 2` |
-| 「这两种东西能不能转化」 | `graph path a b` |
-| 「和这块木板同类的」 | `embed similar <itemId>`，或 `neighbors` + `member_of` 反查 tag |
-| 「这个 tag 里有谁」 | `graph neighbors tag:<tagId> --relation member_of --direction in` |
-| 改完要写脚本 | 见 §4。先查证，id 必须来自查询结果 |
+| `packages/exporter/` | 游戏内 mod（Java）。`ExportCommand` → `ExporterService` → `source/*` 各注册表导出器 → `db/Schema` 写 SQLite |
+| `packages/core/src/database/` | `schema.ts` drizzle 表定义；`schema-manager.ts` 建表/建索引/迁移的声明式注册表 |
+| `packages/core/src/mod-data-importer/` | 读快照 → 写 `project.db`，含 `loot-sources` 派生与 `validator` |
+| `packages/core/src/graph/` | `build.ts` 物化图谱，`query.ts` stats/usages/neighbors/path，`closure.ts` 闭包扩张与边界报告，`derive.ts` 派生 |
+| `packages/core/src/embedding/` | `text.ts` 组装待嵌入文本（纯函数），`build.ts` 增量构建，`search.ts` 检索 |
+| `packages/core/src/engine/` | `ir.ts` 变更 IR，`actions/*` 与 `composites/*` 各动作的 dry-run，`blast-radius.ts` 影响面，`dispatch.ts` 分发 |
+| `packages/core/src/unify/` | 跨 mod 同概念候选与合并预览 |
+| `packages/core/src/export/` | `kubejs-emitter.ts` 生成受管脚本；写盘、撤销 |
+| `packages/core/src/llm/` | provider 抽象（openai / ollama / anthropic），目前只被 embedding 用 |
+| `packages/shared/src/types/` | 跨包类型 |
+| `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`graph` / `embed` 两个域 |
 
-查询结果里没有的注册名 = 幻觉，丢掉。不要用训练数据里的通用 id 代替本包事实。
+`packages/core/src/index.ts` 把所有子模块 `export *`。新增子模块记得挂上去。
 
-## 4. CLI 还没有、库里已有的
+## 4. 不可违反的不变量
 
-这些在 `@delightify/core`（`packages/core/src`），**尚未**挂到 `agent-query`。需要时读源码再调，不要假装 CLI 已支持。
+违反这些等于毁掉项目的价值主张，改动前请确认没有踩到：
 
-| 函数 | 用途 |
+**4.1 确定性层不引入模型。** 闭包扩张、影响面、dry-run、图查询必须是纯 SQL / 图算法。可复现是这层的全部价值；一旦让模型决定走哪条边，就在刚消灭幻觉的地方重开了口子。
+
+**4.2 事实与推断物理隔离。** 导入自快照的事实表不写任何推断结果。派生数据进独立表并带 `source` / `model_id` / `generated_at`，使其可重算、可审计、可整体丢弃。
+
+**4.3 stdout 只有 JSON。** `agent-query` 的 stdout 必须是单个 `{ ok, data? , error? }`，日志和用法提示一律走 stderr，失败退出码非 0。调用方在解析这个。
+
+**4.4 集合返回必须有上限并自报截断。** 新增任何可能返回集合的命令，都要有默认上限并在超限时返回 `truncated: { returned, total, by }`。上下文预算是硬约束，写在代码里而不是文档里。
+
+**4.5 写盘只碰受管文件。** 仅 `kubejs/server_scripts/zzz_delightify_level_generated.js`、`kubejs/client_scripts/zzz_delightify_level_generated.js`、`kubejs/.delightify-level-generated.json`，且必须带 `@delightify-level-generated` 标记。**没有该标记的文件一律不覆盖。** 不碰 `mods/`、作者手写脚本、config。
+
+**4.6 快照 schema 三处同步。** 改导出表结构必须同时改 `packages/exporter` 的 `db/Schema.java`、`packages/core` 的 importer 与 `database/schema*.ts`、以及 [`docs/contract.md`](docs/contract.md)，并升高 `schema_version`（当前 **3**）。少改一处就是静默的数据损坏。
+
+**4.7 不复活 IDE 遗留。** 本仓不加 Electron 壳、聊天框、工作台 UI、应用内 agent 编排、Intent Spec、Gate、Knowledge Center。见 [`docs/design.md`](docs/design.md) §11。
+
+## 5. 常见改动怎么做
+
+**加一个 CLI 命令**：在 `packages/core/src/<域>/` 实现并从该域的 `index.ts` 导出 → `pnpm build` → 在 `agent-query.mjs` 的域分发里加分支 → 更新 [`docs/cli.md`](docs/cli.md) 与 [`docs/using.md`](docs/using.md)。注意 4.3 与 4.4。
+
+**加一张表**：在 `database/schema.ts` 加 drizzle 定义，并在 `database/schema-manager.ts` 的注册表里加同名条目（列 + 索引）——**两处都要**，`schema-manager` 才是实际建表的地方。派生表注意 4.2。
+
+**加一种图关系**：`graph/build.ts` 物化新边 → `graph/query.ts` 的 relation 白名单 → 更新 `docs/world.md` 的边列表与 `docs/using.md` 的说明。已有关系：`member_of` / `input_of` / `output_of` / `obtained_from`。
+
+**加一个引擎动作**：`engine/actions/` 或 `engine/composites/` 下新增 → 在 `engine/dispatch.ts` 注册 → 确认 `blast-radius` 能覆盖它的影响面。动作只产出 dry-run 结果，落盘走 `export/`。
+
+**改 exporter**：Java 侧改完要 `pnpm exporter:build`，并按 4.6 同步三处。验证要真进游戏跑 `/dl_export dump`。
+
+## 6. 已知债务
+
+改到附近时顺手修，别绕开：
+
+| 位置 | 问题 |
 |---|---|
-| `importModData({ projectPath })` | 检测并导入 `export.sqlite`，建图谱 |
-| `queryUnifyCandidates` / `dryRunUnify` | 同名物品候选与合并预览 |
-| `planEngineBlast` | 物品/tag 的配方影响面 |
-| `planEngineAction` | `replace` / `retag` / `remove` / `rename` / `scale` / `hide` / `constrain_inputs` / `differentiate` / `harmonize` 的 dry-run |
-| `previewKubeJs` / `exportKubeJs` / `revertKubeJs` | 预览、写出、撤销受管 KubeJS |
+| `graph/query.ts` `itemUsages` | **无结果上限**。大整合包里改一个常见物品会返回几百条，直接压爆调用方上下文。`graphNeighbors` 已有 `MAX_VISITED = 2000` 可参照 |
+| `embedding/search.ts` | 检索时 `SELECT item_id, vector, source_text FROM item_embeddings` **全量载入内存**再算相似度。数万物品规模下需要改增量或近似检索 |
+| `database/schema-manager.ts` | 仍带 IDE 时代的遗留表：`plans` / `plan_snapshots` / `agent_runs` / `intent_specs` / `gate_reviews` / `guided_sessions` / `detect_reports`。按 4.7 它们不属于本项目，应清理 |
+| `agent-query.mjs` | 硬编码 `../packages/core/dist/*` 相对路径，要求使用者 clone 并构建本仓。应改为发布 `dl` bin |
+| `agent-query.mjs` | `projectPath` 是强制位置参数。应支持从 cwd 上溯发现 `.delightify-level/` 或读 `DL_PROJECT` |
+| 全局 | 无测试框架 |
 
-写盘规则：
+## 7. 现在该做什么
 
-- 只写 `kubejs/server_scripts/zzz_delightify_level_generated.js`、`kubejs/client_scripts/zzz_delightify_level_generated.js`、`kubejs/.delightify-level-generated.json`。
-- 文件必须带 `@delightify-level-generated`。没有该标记的文件一律不覆盖。
-- 先 `previewKubeJs`，把将写出的内容给作者看，确认后再 `exportKubeJs`。
-- `revertKubeJs` 只删上述受管文件。
-- 不要改 `mods/`、作者手写的 kubejs、config。
+路线图见 [`docs/design.md`](docs/design.md) §10。**`graph closure` 已完成**（闭包扩张 + `frontier` + `near_misses`，见 `graph/closure.ts` 与 [`docs/plans/graph-closure.md`](docs/plans/graph-closure.md)），关系性遗漏这条已经消掉。
 
-## 5. 直接读库
+当前第一优先是**响应契约补全**：`graph usages` 补上限（见 §6）、id 不存在时给 `did_you_mean`、`projectPath` 从 cwd 上溯发现。都是小活，且能立刻减少调用方踩坑。
 
-`project.db` 是 SQLite。复杂 ad-hoc 可以用 sqlite3，但：
+不确定优先级时问作者，不要自行扩大范围。
 
-- 加 `LIMIT`，按需列，不要倒全表。
-- 事实以导入后的表为准，不要去翻 `mods/*.jar` 当真相。
-- 图谱与向量表结构见 [`docs/world.md`](docs/world.md) 和 [`docs/contract.md`](docs/contract.md)。
+## 8. 不要做
 
-## 6. 不要做
-
-- 不要编造本包不存在的物品/配方/tag。
-- 不要把「并成哪个」「降多少成本」当成可以替作者拍板的事；可以列出选项和 usages。
-- 不要在本仓加 Electron 页面、Intent Spec、Gate、应用内 Agent 循环。
-- 不要在未授权时跑 `embed build`（会外发文本）。
-- 不要修改 exporter 快照文件本身。
+- 不要在事实表里塞推断，不要在确定性路径里塞模型调用。
+- 不要新增未在 `docs/design.md` 里的对外概念。要加先改设计文档。
+- 不要为了让 CLI 跑通而绕过 `pnpm build` 去改 `dist/`。
+- 不要在文档里承诺尚未实现的命令。用 `[计划]` 标注，或干脆不写。
