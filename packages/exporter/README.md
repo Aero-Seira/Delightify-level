@@ -1,8 +1,8 @@
-# Delightify Exporter
+# leveled Exporter
 
-**NeoForge 1.21.1 / Java 21** 的游戏内数据导出 mod。把整合包的**运行时最终态**导出成 SQLite，供 Delightify 世界库离线消费。
+**NeoForge 1.21.1 / Java 21** 的游戏内数据导出 mod。把整合包的**运行时最终态**导出成 SQLite，供 leveled 世界库离线消费。
 
-> 重写自旧的 1.20.1 Forge `Delightify-Exporter`。重写动机：跨过 1.20.5 Data Components 断层、修复性能（旧版导出阻塞主线程造成卡顿）、对齐新契约。
+> 重写自旧的 1.20.1 Forge Delightify Exporter。游戏内命令暂仍是 `/mpide_export dump`，输出 `mpide-exporter/export.sqlite`；改名另做契约升级。
 
 ## 契约
 

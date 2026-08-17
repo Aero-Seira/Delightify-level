@@ -12,8 +12,8 @@ dist/
 *.db-wal
 *.sqlite
 *.sqlite-journal
-.delightify/
-**/.delightify/
+.leveled/
+**/.leveled/
 packages/exporter/build/
 packages/exporter/.gradle/
 packages/exporter/run/

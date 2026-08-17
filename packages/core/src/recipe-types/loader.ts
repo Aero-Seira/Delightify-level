@@ -7,7 +7,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { RecipeTypeMetadata, RecipeTypeConfig } from '@delightify/shared';
+import type { RecipeTypeMetadata, RecipeTypeConfig } from '@leveled/shared';
 
 // 配方类型元数据缓存
 const metadataCache = new Map<string, RecipeTypeMetadata>();

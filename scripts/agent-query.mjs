@@ -2,7 +2,7 @@
 /**
  * agent-query — 面向外部 agent 的整合包数据查询 CLI
  *
- * 查询 Delightify 项目库（<projectPath>/.delightify/project.db）中的
+ * 查询 leveled 项目库（<projectPath>/.leveled/project.db）中的
  * 游戏事实图谱与物品向量，stdout 输出 JSON：{ ok, data?, error? }，
  * 退出码非 0 即失败。IDE 无需启动。使用前需先 pnpm build。
  *
@@ -73,9 +73,9 @@ async function main() {
   const [projectPath, domain, command, ...rest] = process.argv.slice(2);
   if (!projectPath || !domain || !command) fail('参数不足：<projectPath> <graph|embed> <command>', true);
 
-  const dbPath = path.join(projectPath, '.delightify', 'project.db');
+  const dbPath = path.join(projectPath, '.leveled', 'project.db');
   if (!fs.existsSync(dbPath)) {
-    fail(`项目库不存在：${dbPath}（请确认 projectPath 是 Delightify 项目根，且已导入过数据）`);
+    fail(`项目库不存在：${dbPath}（请确认 projectPath 是 leveled 项目根，且已导入过数据）`);
   }
 
   const { flags, positional } = parseFlags(rest);

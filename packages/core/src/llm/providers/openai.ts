@@ -7,7 +7,7 @@
  * - completions      → POST {base}/completions
  */
 
-import { inferApiProtocol, resolveLlmModelsUrl, resolveLlmRequestUrl } from '@delightify/shared';
+import { inferApiProtocol, resolveLlmModelsUrl, resolveLlmRequestUrl } from '@leveled/shared';
 import { BaseLLMProvider } from './base';
 import type { LLMMessage, LLMResponse, LLMRequestOptions } from '../types';
 

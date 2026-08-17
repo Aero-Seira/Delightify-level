@@ -8,7 +8,7 @@ import type {
   EngineDryRunResult,
   EngineRiskSummary,
   EngineScaleClassification,
-} from '@delightify/shared';
+} from '@leveled/shared';
 import { createProjectDbClient } from '../database/client';
 import {
   computeBlastRadius,
@@ -57,7 +57,7 @@ const RISK_SEVERITY_RANK: Record<EngineRiskSummary['severity'], number> = {
 };
 
 function projectDbPath(projectPath: string): string {
-  return path.join(projectPath, '.delightify', 'project.db');
+  return path.join(projectPath, '.leveled', 'project.db');
 }
 
 function isRecord(value: unknown): value is UnknownRecord {

@@ -6,7 +6,7 @@ import type {
   KubeJsExportResult,
   KubeJsPreviewResult,
   KubeJsRevertResult,
-} from '@delightify/shared';
+} from '@leveled/shared';
 
 export type {
   KubeJsExportParams,
@@ -25,10 +25,10 @@ export interface KubeJsExportOptions {
   generatedAt?: string;
 }
 
-const GENERATED_MARKER = '@delightify-generated';
-const RECIPES_RELATIVE_PATH = 'kubejs/server_scripts/zzz_delightify_generated.js';
-const CLIENT_SCRIPTS_RELATIVE_PATH = 'kubejs/client_scripts/zzz_delightify_generated.js';
-const GENERATED_MANIFEST_RELATIVE_PATH = 'kubejs/.delightify-generated.json';
+const GENERATED_MARKER = '@leveled-generated';
+const RECIPES_RELATIVE_PATH = 'kubejs/server_scripts/zzz_leveled_generated.js';
+const CLIENT_SCRIPTS_RELATIVE_PATH = 'kubejs/client_scripts/zzz_leveled_generated.js';
+const GENERATED_MANIFEST_RELATIVE_PATH = 'kubejs/.leveled-generated.json';
 
 function generatedFilePath(projectPath: string): string {
   return path.join(projectPath, RECIPES_RELATIVE_PATH);
@@ -130,7 +130,7 @@ function emitClientScriptsFile(hideOperations: ChangeOperation[], generatedAt: s
     marker: GENERATED_MARKER,
     content: [
       `// ${GENERATED_MARKER}`,
-      '// Do not edit by hand. Regenerate from Delightify.',
+      '// Do not edit by hand. Regenerate from leveled.',
       '// This file only affects JEI. REI / EMI users must hide items manually.',
       `// Generated at: ${generatedAt}`,
       '',
@@ -240,7 +240,7 @@ function emitRecipesFile(recipeOperations: ChangeOperation[], generatedAt: strin
     marker: GENERATED_MARKER,
     content: [
       `// ${GENERATED_MARKER}`,
-      '// Do not edit by hand. Regenerate from Delightify.',
+      '// Do not edit by hand. Regenerate from leveled.',
       `// Generated at: ${generatedAt}`,
       '',
       'ServerEvents.recipes(event => {',
@@ -263,7 +263,7 @@ function emitServerScriptsFile(
 
   const lines = [
     `// ${GENERATED_MARKER}`,
-    '// Do not edit by hand. Regenerate from Delightify.',
+    '// Do not edit by hand. Regenerate from leveled.',
     `// Generated at: ${generatedAt}`,
     '',
   ];
@@ -336,7 +336,7 @@ function resourcePart(value: string, label: string): string {
 function splitItemId(itemId: string): { namespace: string; path: string } {
   const separatorIndex = itemId.indexOf(':');
   if (separatorIndex <= 0) {
-    return { namespace: 'delightify', path: itemId };
+    return { namespace: 'leveled', path: itemId };
   }
   return {
     namespace: itemId.slice(0, separatorIndex),
@@ -513,7 +513,7 @@ async function assertGeneratedFileIsOwned(filePath: string, marker: string): Pro
   }
 
   if (!existing.includes(marker)) {
-    throw new Error(`拒绝覆盖非 Delightify 生成文件: ${filePath}`);
+    throw new Error(`拒绝覆盖非 leveled 生成文件: ${filePath}`);
   }
 }
 
@@ -578,7 +578,7 @@ async function readGeneratedManifest(projectPath: string): Promise<GeneratedMani
   }
 
   if (!existing.includes(GENERATED_MARKER)) {
-    throw new Error(`拒绝读取非 Delightify 生成清单: ${filePath}`);
+    throw new Error(`拒绝读取非 leveled 生成清单: ${filePath}`);
   }
 
   try {
@@ -610,7 +610,7 @@ function isAllowedGeneratedRelativePath(relativePath: string): boolean {
     relativePath.includes('/lang/') &&
     relativePath.endsWith('.json')
   ) || (
-    relativePath === 'kubejs/client_scripts/zzz_delightify_generated.js'
+    relativePath === 'kubejs/client_scripts/zzz_leveled_generated.js'
   );
 }
 
@@ -628,7 +628,7 @@ async function deleteOwnedFile(
   allowManifestOwnership: boolean
 ): Promise<boolean> {
   if (!isAllowedGeneratedRelativePath(entry.relativePath)) {
-    throw new Error(`拒绝删除不在 Delightify 生成路径白名单内的文件: ${entry.relativePath}`);
+    throw new Error(`拒绝删除不在 leveled 生成路径白名单内的文件: ${entry.relativePath}`);
   }
 
   const filePath = absoluteGeneratedPath(projectPath, entry.relativePath);
@@ -638,7 +638,7 @@ async function deleteOwnedFile(
   }
 
   if (!existing.includes(entry.marker) && !(allowManifestOwnership && canUseManifestOwnership(entry.relativePath))) {
-    throw new Error(`拒绝删除非 Delightify 生成文件: ${filePath}`);
+    throw new Error(`拒绝删除非 leveled 生成文件: ${filePath}`);
   }
 
   await fs.unlink(filePath);
@@ -655,7 +655,7 @@ async function assertGeneratedFileCanBeWritten(
   manifest: GeneratedManifest | null
 ): Promise<void> {
   if (!isAllowedGeneratedRelativePath(file.relativePath)) {
-    throw new Error(`拒绝写入不在 Delightify 生成路径白名单内的文件: ${file.relativePath}`);
+    throw new Error(`拒绝写入不在 leveled 生成路径白名单内的文件: ${file.relativePath}`);
   }
 
   const filePath = absoluteGeneratedPath(projectPath, file.relativePath);
@@ -668,7 +668,7 @@ async function assertGeneratedFileCanBeWritten(
     return;
   }
 
-  throw new Error(`拒绝覆盖非 Delightify 生成文件: ${filePath}`);
+  throw new Error(`拒绝覆盖非 leveled 生成文件: ${filePath}`);
 }
 
 async function deleteOrphanGeneratedFiles(
@@ -698,7 +698,7 @@ async function deleteGeneratedManifest(projectPath: string): Promise<void> {
   }
 
   if (!manifestContentText.includes(GENERATED_MARKER)) {
-    throw new Error(`拒绝删除非 Delightify 生成清单: ${manifestPath}`);
+    throw new Error(`拒绝删除非 leveled 生成清单: ${manifestPath}`);
   }
 
   await fs.unlink(manifestPath);
@@ -774,7 +774,7 @@ export async function revertKubeJs(projectPath: string): Promise<KubeJsRevertRes
   const manifestContentText = await readExistingFile(manifestPath);
   if (manifestContentText !== null) {
     if (!manifestContentText.includes(GENERATED_MARKER)) {
-      throw new Error(`拒绝删除非 Delightify 生成清单: ${manifestPath}`);
+      throw new Error(`拒绝删除非 leveled 生成清单: ${manifestPath}`);
     }
     await fs.unlink(manifestPath);
     deleted = true;

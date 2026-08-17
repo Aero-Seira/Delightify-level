@@ -1,12 +1,12 @@
-# Delightify
+# leveled
 
 游戏外的**整合包世界知识平台**。把 Minecraft 实例的运行时最终态做成外部 agent 能查、能引用、能谨慎调用的知识和工具。规划与改文件交给作者正在用的 harness（Claude Code、Cursor、Codex 等）。
 
-Delightify 不是 IDE，也不是又一个聊天框。
+leveled 不是 IDE，也不是又一个聊天框。
 
 ## 它提供什么
 
-1. **世界**：游戏内 `/mpide_export dump` → 导入 `<实例>/.delightify/project.db`（物品、配方、tag、战利品）+ 游戏事实图谱；授权后构建物品向量。
+1. **世界**：游戏内 `/mpide_export dump` → 导入 `<实例>/.leveled/project.db`（物品、配方、tag、战利品）+ 游戏事实图谱；授权后构建物品向量。
 2. **工具**：图谱/向量检索、影响面、unify 查询、引擎 dry-run、KubeJS 受管预览/写出/撤销。
 3. **接口**：先用 CLI。MCP 与 Skill 按同一套函数往后加。
 

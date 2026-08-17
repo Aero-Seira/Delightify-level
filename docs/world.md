@@ -1,6 +1,6 @@
 # 世界知识平台
 
-Delightify 把一个整合包实例的**运行时最终态**做成 agent 能查询的世界，以及一套确定性工具。思考、规划、改手写脚本发生在作者自己的 harness 里。
+leveled 把一个整合包实例的**运行时最终态**做成 agent 能查询的世界，以及一套确定性工具。思考、规划、改手写脚本发生在作者自己的 harness 里。
 
 ## 为什么不是 IDE
 
@@ -10,7 +10,7 @@ Delightify 把一个整合包实例的**运行时最终态**做成 agent 能查�
 
 **世界**：exporter 快照 → `project.db`（物品 / 配方 / tag / 战利品 / 显示名）→ 导入时物化的游戏事实图谱 → 授权后构建的物品向量。
 
-**工具**：检索、usages / neighbors / path、blast、unify 查询、engine dry-run、KubeJS preview。export / revert 只写 Delightify 受管文件，须由 harness 确认。
+**工具**：检索、usages / neighbors / path、blast、unify 查询、engine dry-run、KubeJS preview。export / revert 只写 leveled 受管文件，须由 harness 确认。
 
 **接口**：CLI 先于 MCP。Skill 教外部 agent 先查再改、id 不许编造。
 

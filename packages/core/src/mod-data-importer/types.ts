@@ -243,11 +243,13 @@ export interface DetectedDataFile {
 export const EXPORTER_V1_DATA_FILE_PATHS = [
   'mpide-exporter/export.sqlite',
   '.mpide-exporter/export.sqlite',
-  'delightify/export.sqlite',
-  '.delightify/export.sqlite',
+  'leveled-exporter/export.sqlite',
+  '.leveled-exporter/export.sqlite',
 ];
 
 export const LEGACY_DATA_FILE_PATHS = [
+  'delightify/export.sqlite',
+  '.delightify/export.sqlite',
   'delightify-exporter/export.sqlite',
   '.delightify-exporter/export.sqlite',
   'config/delightify-exporter/export.sqlite',

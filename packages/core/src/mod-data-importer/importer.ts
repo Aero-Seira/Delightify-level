@@ -206,7 +206,7 @@ export async function importModData(options: ModDataImportOptions): Promise<Impo
       message: '准备导入...',
     });
 
-    const projectDbPath = path.join(projectPath, '.delightify', 'project.db');
+    const projectDbPath = path.join(projectPath, '.leveled', 'project.db');
     
     // 确保目录存在
     const fs = await import('fs');
@@ -1417,7 +1417,7 @@ async function recordFailedImport(data: {
   let client: Client | null = null;
 
   try {
-    const projectDbPath = path.join(data.projectPath, '.delightify', 'project.db');
+    const projectDbPath = path.join(data.projectPath, '.leveled', 'project.db');
     const fs = await import('fs');
     const dbDir = path.dirname(projectDbPath);
     if (!fs.existsSync(dbDir)) {

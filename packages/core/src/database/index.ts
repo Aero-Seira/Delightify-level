@@ -6,7 +6,7 @@
  * 
  * @example
  * ```ts
- * import { createProjectDbClient, schema, eq } from '@delightify/main/services/database';
+ * import { createProjectDbClient, schema, eq } from '@leveled/main/services/database';
  * 
  * const db = createProjectDbClient(projectDbPath);
  * const result = await db.execute('SELECT * FROM mods');

@@ -1,5 +1,5 @@
 {
-  "name": "@delightify/core",
+  "name": "@leveled/core",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -10,7 +10,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@delightify/shared": "workspace:*",
+    "@leveled/shared": "workspace:*",
     "@libsql/client": "^0.17.0",
     "drizzle-orm": "^0.30.0"
   },

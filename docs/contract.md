@@ -1,6 +1,6 @@
 # Exporter 契约（当前 v3）
 
-> Delightify 世界库 ↔ 游戏内 Exporter 的接口。**契约先行**。
+> leveled 世界库 ↔ 游戏内 Exporter 的接口。**契约先行**。
 > 从 Delightify-IDE 迁入时重写了抬头；表结构未改。
 > 版本：v3（含战利品表与配方网格宽高）。v2 起有 `loot_tables` / `loot_bindings`。
 
