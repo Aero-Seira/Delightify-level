@@ -1,16 +1,16 @@
-package io.github.aeroseira.mpide_exporter.export;
+package io.github.aeroseira.dl_exporter.export;
 
 import com.mojang.logging.LogUtils;
-import io.github.aeroseira.mpide_exporter.ModpackIdeExporter;
-import io.github.aeroseira.mpide_exporter.db.SqliteDatabase;
-import io.github.aeroseira.mpide_exporter.source.ItemResourceCapture;
-import io.github.aeroseira.mpide_exporter.source.ItemRegistrySource;
-import io.github.aeroseira.mpide_exporter.source.ItemResourceSource;
-import io.github.aeroseira.mpide_exporter.source.ItemTagSource;
-import io.github.aeroseira.mpide_exporter.source.LootTableSource;
-import io.github.aeroseira.mpide_exporter.source.ModListSource;
-import io.github.aeroseira.mpide_exporter.source.RecipeSource;
-import io.github.aeroseira.mpide_exporter.source.TranslationSource;
+import io.github.aeroseira.dl_exporter.ModpackIdeExporter;
+import io.github.aeroseira.dl_exporter.db.SqliteDatabase;
+import io.github.aeroseira.dl_exporter.source.ItemResourceCapture;
+import io.github.aeroseira.dl_exporter.source.ItemRegistrySource;
+import io.github.aeroseira.dl_exporter.source.ItemResourceSource;
+import io.github.aeroseira.dl_exporter.source.ItemTagSource;
+import io.github.aeroseira.dl_exporter.source.LootTableSource;
+import io.github.aeroseira.dl_exporter.source.ModListSource;
+import io.github.aeroseira.dl_exporter.source.RecipeSource;
+import io.github.aeroseira.dl_exporter.source.TranslationSource;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModList;
@@ -48,7 +48,7 @@ public final class ExporterService {
     private static final ExporterService INSTANCE = new ExporterService();
     public static ExporterService get() { return INSTANCE; }
 
-    private static final String OUTPUT_DIR = "mpide-exporter";
+    private static final String OUTPUT_DIR = "dl-exporter";
     private static final String OUTPUT_FILE = "export.sqlite";
     private static final String EXPORTER_VERSION = "0.1.0";
 
@@ -71,7 +71,7 @@ public final class ExporterService {
             } finally {
                 running.set(false);
             }
-        }, "mpide-export-worker");
+        }, "dl-export-worker");
         worker.setDaemon(true);
         worker.start();
     }
@@ -148,7 +148,7 @@ public final class ExporterService {
     /** manifest 采集（契约 §2）。轻量，安全地在 server thread 执行。 */
     private static Map<String, String> captureManifest(MinecraftServer server) {
         Map<String, String> m = new LinkedHashMap<>();
-        m.put("schema_version", String.valueOf(io.github.aeroseira.mpide_exporter.db.Schema.SCHEMA_VERSION));
+        m.put("schema_version", String.valueOf(io.github.aeroseira.dl_exporter.db.Schema.SCHEMA_VERSION));
         m.put("exporter_version", EXPORTER_VERSION);
         m.put("loader", "neoforge");
         m.put("mc_version", server.getServerVersion());

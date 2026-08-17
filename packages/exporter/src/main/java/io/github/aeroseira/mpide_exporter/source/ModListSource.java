@@ -1,4 +1,4 @@
-package io.github.aeroseira.mpide_exporter.source;
+package io.github.aeroseira.dl_exporter.source;
 
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforgespi.language.IModInfo;

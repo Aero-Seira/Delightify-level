@@ -2,8 +2,8 @@
 
 游戏内 exporter 写出 SQLite。`schema_version` 当前为 **3**。改表必须同步 `packages/exporter` 的 `Schema` 与 `packages/core` 的 importer，并升高版本号。
 
-命令：`/mpide_export dump`  
-文件：`<实例>/mpide-exporter/export.sqlite`
+命令：`/dl_export dump`  
+文件：`<实例>/dl-exporter/export.sqlite`
 
 ## manifest
 

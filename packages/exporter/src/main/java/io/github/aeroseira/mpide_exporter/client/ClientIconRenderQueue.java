@@ -1,4 +1,4 @@
-package io.github.aeroseira.mpide_exporter.client;
+package io.github.aeroseira.dl_exporter.client;
 
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Lighting;

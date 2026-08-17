@@ -1,8 +1,8 @@
-package io.github.aeroseira.mpide_exporter.client;
+package io.github.aeroseira.dl_exporter.client;
 
 import com.mojang.logging.LogUtils;
-import io.github.aeroseira.mpide_exporter.source.ItemRegistrySource;
-import io.github.aeroseira.mpide_exporter.source.ItemResourceSource;
+import io.github.aeroseira.dl_exporter.source.ItemRegistrySource;
+import io.github.aeroseira.dl_exporter.source.ItemResourceSource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -28,7 +28,7 @@ public final class ClientItemIconExportBridge {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String RESOURCE_TYPE_TEXTURE = "texture";
-    private static final String RENDERED_NAMESPACE = "mpide_exporter";
+    private static final String RENDERED_NAMESPACE = "dl_exporter";
     private static final long RENDER_TIMEOUT_SECONDS = 120;
 
     private ClientItemIconExportBridge() {}

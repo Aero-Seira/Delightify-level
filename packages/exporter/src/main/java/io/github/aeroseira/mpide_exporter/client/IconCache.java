@@ -1,6 +1,6 @@
-package io.github.aeroseira.mpide_exporter.client;
+package io.github.aeroseira.dl_exporter.client;
 
-import io.github.aeroseira.mpide_exporter.source.ItemRegistrySource;
+import io.github.aeroseira.dl_exporter.source.ItemRegistrySource;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

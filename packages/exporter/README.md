@@ -14,10 +14,10 @@ pnpm exporter:runClient
 进单人世界后：
 
 ```
-/mpide_export dump
+/dl_export dump
 ```
 
-输出：`<实例>/mpide-exporter/export.sqlite`。
+输出：`<实例>/dl-exporter/export.sqlite`。
 
 专用服也能跑该命令，但不含依赖客户端渲染的贴图与配方视图。
 

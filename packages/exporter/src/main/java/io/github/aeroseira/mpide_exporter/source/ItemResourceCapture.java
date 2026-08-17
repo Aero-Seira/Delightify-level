@@ -1,4 +1,4 @@
-package io.github.aeroseira.mpide_exporter.source;
+package io.github.aeroseira.dl_exporter.source;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.MinecraftServer;
@@ -17,7 +17,7 @@ public final class ItemResourceCapture {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String CLIENT_BRIDGE =
-        "io.github.aeroseira.mpide_exporter.client.ClientItemIconExportBridge";
+        "io.github.aeroseira.dl_exporter.client.ClientItemIconExportBridge";
 
     private ItemResourceCapture() {}
 

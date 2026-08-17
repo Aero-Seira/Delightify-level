@@ -1,7 +1,7 @@
-package io.github.aeroseira.mpide_exporter;
+package io.github.aeroseira.dl_exporter;
 
 import com.mojang.logging.LogUtils;
-import io.github.aeroseira.mpide_exporter.command.ExportCommand;
+import io.github.aeroseira.dl_exporter.command.ExportCommand;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -11,13 +11,13 @@ import org.slf4j.Logger;
 /**
  * Delightify-level Exporter —— 主入口（NeoForge 1.21.1）。
  *
- * 职责：注册 /mpide_export 命令。导出逻辑见 {@link io.github.aeroseira.mpide_exporter.export.ExporterService}。
+ * 职责：注册 /dl_export 命令。导出逻辑见 {@link io.github.aeroseira.dl_exporter.export.ExporterService}。
  * 契约见仓库 docs/contract.md。
  */
 @Mod(ModpackIdeExporter.MOD_ID)
 public final class ModpackIdeExporter {
 
-    public static final String MOD_ID = "mpide_exporter";
+    public static final String MOD_ID = "dl_exporter";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public ModpackIdeExporter(IEventBus modEventBus, ModContainer modContainer) {

@@ -241,8 +241,8 @@ export interface DetectedDataFile {
 
 // 数据文件预期路径（相对于整合包根目录）
 export const EXPORTER_V1_DATA_FILE_PATHS = [
-  'mpide-exporter/export.sqlite',
-  '.mpide-exporter/export.sqlite',
+  'dl-exporter/export.sqlite',
+  '.dl-exporter/export.sqlite',
   'delightify-level-exporter/export.sqlite',
   '.delightify-level-exporter/export.sqlite',
 ];

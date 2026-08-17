@@ -17,4 +17,4 @@
  * 纪律：采集只在 server thread 做最小快照；可浅引用已冻结/不可变的注册表上下文，
  * 但 JSON 编码等序列化与写库在 worker 线程（见 export.ExporterService）。
  */
-package io.github.aeroseira.mpide_exporter.source;
+package io.github.aeroseira.dl_exporter.source;

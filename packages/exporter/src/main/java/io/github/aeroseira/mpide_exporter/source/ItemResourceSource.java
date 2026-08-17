@@ -1,4 +1,4 @@
-package io.github.aeroseira.mpide_exporter.source;
+package io.github.aeroseira.dl_exporter.source;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;

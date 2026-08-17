@@ -1,4 +1,4 @@
-package io.github.aeroseira.mpide_exporter.source;
+package io.github.aeroseira.dl_exporter.source;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.locale.Language;

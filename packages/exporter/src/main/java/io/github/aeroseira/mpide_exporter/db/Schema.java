@@ -1,4 +1,4 @@
-package io.github.aeroseira.mpide_exporter.db;
+package io.github.aeroseira.dl_exporter.db;
 
 import java.util.List;
 

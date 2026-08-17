@@ -4,8 +4,8 @@ Delightify-level 把一个整合包实例在游戏里**已经加载完成的状�
 
 ## 数据怎么来
 
-1. 把 exporter 放进实例的 `mods/`，进档执行 `/mpide_export dump`。
-2. 快照写在 `<实例>/mpide-exporter/export.sqlite`。
+1. 把 exporter 放进实例的 `mods/`，进档执行 `/dl_export dump`。
+2. 快照写在 `<实例>/dl-exporter/export.sqlite`。
 3. `importModData` 读入 `<实例>/.delightify-level/project.db`，并物化游戏事实图谱。
 4. 经作者授权后，`embed build` 为物品建立向量（名称文本会发给 embedding provider）。
 

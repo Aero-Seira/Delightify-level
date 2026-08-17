@@ -1,13 +1,13 @@
-package io.github.aeroseira.mpide_exporter.db;
+package io.github.aeroseira.dl_exporter.db;
 
 import com.mojang.logging.LogUtils;
-import io.github.aeroseira.mpide_exporter.source.ItemRegistrySource;
-import io.github.aeroseira.mpide_exporter.source.ItemResourceSource;
-import io.github.aeroseira.mpide_exporter.source.ItemTagSource;
-import io.github.aeroseira.mpide_exporter.source.LootTableSource;
-import io.github.aeroseira.mpide_exporter.source.ModListSource;
-import io.github.aeroseira.mpide_exporter.source.RecipeSource;
-import io.github.aeroseira.mpide_exporter.source.TranslationSource;
+import io.github.aeroseira.dl_exporter.source.ItemRegistrySource;
+import io.github.aeroseira.dl_exporter.source.ItemResourceSource;
+import io.github.aeroseira.dl_exporter.source.ItemTagSource;
+import io.github.aeroseira.dl_exporter.source.LootTableSource;
+import io.github.aeroseira.dl_exporter.source.ModListSource;
+import io.github.aeroseira.dl_exporter.source.RecipeSource;
+import io.github.aeroseira.dl_exporter.source.TranslationSource;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -360,6 +360,6 @@ public final class SqliteDatabase implements AutoCloseable {
         @Override public int getMajorVersion() { return delegate.getMajorVersion(); }
         @Override public int getMinorVersion() { return delegate.getMinorVersion(); }
         @Override public boolean jdbcCompliant() { return delegate.jdbcCompliant(); }
-        @Override public java.util.logging.Logger getParentLogger() { return java.util.logging.Logger.getLogger("mpide-sqlite"); }
+        @Override public java.util.logging.Logger getParentLogger() { return java.util.logging.Logger.getLogger("dl-sqlite"); }
     }
 }
