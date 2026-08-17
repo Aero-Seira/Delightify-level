@@ -7,7 +7,7 @@ import type {
   DecisionStatus,
   DeferredSuggestion,
   UnifyDiffOperation as SharedUnifyDiffOperation,
-} from '@leveled/shared';
+} from '@delightify/shared';
 import type { UnifyDiffOperation as DryRunUnifyDiffOperation } from '../unify/dry-run-service';
 
 export type {

@@ -1,7 +1,7 @@
 # 从 Delightify-IDE 搬了什么
 
 旧仓：`/Users/aeroseira/Repositories/Delightify-IDE`  
-本仓产品名 **leveled**。2026-08-17 文档重写，代码只复制世界层与确定性工具，并去掉 Delightify 标识。
+本仓产品名 **Delightify-level**。2026-08-17 从 Delightify-IDE 拆出世界层。
 
 ## 复制并保留
 
@@ -29,4 +29,4 @@
 
 ## 尚未接到 CLI 的能力
 
-`importModData`、`engineDryRun`、`previewKubeJs` / `exportKubeJs` 已在 `@leveled/core`，还没有 `agent-query` 子命令。下一步就是把它们挂上，并写 Skill。
+`importModData`、`engineDryRun`、`previewKubeJs` / `exportKubeJs` 已在 `@delightify/core`，还没有 `agent-query` 子命令。下一步就是把它们挂上，并写 Skill。

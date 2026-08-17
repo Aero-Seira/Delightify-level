@@ -1,8 +1,8 @@
 {
-  "name": "@leveled/exporter",
+  "name": "@delightify/exporter",
   "version": "0.1.0",
   "private": true,
-  "description": "NeoForge runtime final-state data exporter for leveled.",
+  "description": "NeoForge runtime final-state data exporter for Delightify-level.",
   "scripts": {
     "gradle": "node ../../scripts/run-gradle.mjs .",
     "exporter:build": "node ../../scripts/run-gradle.mjs . build",

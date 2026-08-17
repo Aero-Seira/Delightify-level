@@ -4,7 +4,7 @@
  * 支持 Claude API
  */
 
-import { resolveLlmModelsUrl, resolveLlmRequestUrl } from '@leveled/shared';
+import { resolveLlmModelsUrl, resolveLlmRequestUrl } from '@delightify/shared';
 import { BaseLLMProvider } from './base';
 import type { LLMMessage, LLMResponse, LLMRequestOptions } from '../types';
 

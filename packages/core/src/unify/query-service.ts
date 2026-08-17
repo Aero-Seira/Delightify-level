@@ -541,7 +541,7 @@ export async function queryUnifyCandidates(
   const lang = params.lang || 'zh_cn';
   const limit = Math.min(Math.max(params.limit ?? 50, 1), 200);
   const normalizedQuery = normalizeText(query);
-  const db = createProjectDbClient(path.join(projectPath, '.leveled', 'project.db'));
+  const db = createProjectDbClient(path.join(projectPath, '.delightify-level', 'project.db'));
 
   const status = await getDataSourceStatus(db);
   const candidates = new Map<string, CandidateDraft>();

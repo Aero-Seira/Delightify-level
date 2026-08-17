@@ -1,6 +1,6 @@
 # 外部 agent 怎么用这个世界
 
-前置：`pnpm build`；目标实例已导入过快照（存在 `<projectPath>/.leveled/project.db`）。
+前置：`pnpm build`；目标实例已导入过快照（存在 `<projectPath>/.delightify-level/project.db`）。
 
 ```bash
 node scripts/agent-query.mjs <projectPath> <graph|embed> <子命令> [参数]
@@ -36,5 +36,5 @@ node scripts/agent-query.mjs <projectPath> embed similar biomesoplenty:fir_plank
 
 1. 先查世界，再提议改动。查询结果里没有的 id 当作幻觉丢掉。
 2. 替换或统一前先 `graph usages`（或日后的 blast）。
-3. 写盘只碰 leveled 受管文件；先 preview 再 export（写出 CLI 尚未接到本入口）。
+3. 写盘只碰 Delightify-level 受管文件；先 preview 再 export（写出 CLI 尚未接到本入口）。
 4. 不要把整份 `project.db` 塞进上下文。用 usages / neighbors / search 取片段。

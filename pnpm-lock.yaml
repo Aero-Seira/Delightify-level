@@ -10,7 +10,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@leveled/shared':
+      '@delightify/shared':
         specifier: workspace:*
         version: link:../shared
       '@libsql/client':

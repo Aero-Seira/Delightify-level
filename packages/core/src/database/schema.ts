@@ -1,5 +1,5 @@
 /**
- * leveled Database Schema - v2.1
+ * Delightify-level Database Schema - v2.1
  * 
  * 根据 reference_sql/export.sqlite 样例调整的数据库设计
  * 与附属Mod生成的数据结构保持一致

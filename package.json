@@ -1,12 +1,12 @@
 {
-  "name": "leveled",
+  "name": "delightify-level",
   "private": true,
   "version": "0.1.0",
   "description": "整合包世界知识平台：运行时最终态、图谱/向量检索，以及给外部 agent 用的确定性工具。",
   "scripts": {
-    "build": "pnpm -r --filter @leveled/shared --filter @leveled/core build",
-    "typecheck": "pnpm --filter @leveled/shared build && pnpm -r --filter @leveled/shared --filter @leveled/core typecheck",
-    "clean": "pnpm -r --filter @leveled/shared --filter @leveled/core clean",
+    "build": "pnpm -r --filter @delightify/shared --filter @delightify/core build",
+    "typecheck": "pnpm --filter @delightify/shared build && pnpm -r --filter @delightify/shared --filter @delightify/core typecheck",
+    "clean": "pnpm -r --filter @delightify/shared --filter @delightify/core clean",
     "exporter:build": "node scripts/run-gradle.mjs packages/exporter build",
     "exporter:compile": "node scripts/run-gradle.mjs packages/exporter compileJava",
     "exporter:runClient": "node scripts/run-gradle.mjs packages/exporter runClient",
