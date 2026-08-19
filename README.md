@@ -8,6 +8,7 @@
 
 - **保留并演进**：游戏内导出器（`packages/exporter`）、快照导入与图谱（`packages/core`）、向量检索、引擎 dry-run / 影响面、受管 KubeJS 写出、`agent-query` CLI；
 - **不包含**：Electron 壳、聊天框 / 工作台 UI、应用内 Agent 编排、Intent Spec / Gate、Knowledge Center 等。
+- **人机面**（见 [`docs/design.md`](docs/design.md) §3）：**浏览层**（`present-serve` 的 `/b` 图鉴、选取、导出 ID）与**呈现层**（人审 scope）分开，都不是工作台。配方画布的 JEI 采集仍缺。
 
 原仓库已冻结，不再作为开发主线；本仓库独立继续演进。
 
@@ -38,6 +39,11 @@ pnpm exporter:runClient
 node scripts/agent-query.mjs <实例路径> graph stats
 node scripts/agent-query.mjs <实例路径> graph usages minecraft:copper_ingot
 node scripts/agent-query.mjs <实例路径> embed search "铜锭" --top 10
+
+# 人审闭集（呈现层）
+node scripts/agent-query.mjs <实例路径> scope create copper minecraft:copper_ingot
+node scripts/present-serve.mjs <实例路径> --scope copper
+# 同一进程打开 /b 即图鉴
 ```
 
 摄入快照目前走 `@delightify/core` 的 `importModData`，尚未接到 `agent-query`。

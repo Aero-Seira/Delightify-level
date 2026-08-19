@@ -17,11 +17,14 @@ export {
   itemUsages,
   graphNeighbors,
   graphPath,
+  DEFAULT_USAGES_LIMIT,
   type GraphStats,
   type ItemUsages,
+  type ItemUsagesOptions,
   type NeighborsOptions,
   type NeighborsResult,
   type PathResult,
+  type UsagesTruncation,
 } from './query';
 export {
   closureFrom,

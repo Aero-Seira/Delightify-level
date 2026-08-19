@@ -10,7 +10,7 @@ Delightify-level 提供整合包的**运行时最终态**（游戏加载完之�
 
 ## 1. 先确认世界在不在
 
-`projectPath` 必须是 Minecraft **实例根**（里面有 `mods/`），不是本 git 仓库根。
+`projectPath` 是 Minecraft **实例根**（里面有 `mods/`），不是本 git 仓库根。可以不写：在实例目录下执行，或设 `DL_PROJECT`，或传 `--project <path>`。
 
 | 路径 | 含义 |
 |---|---|
@@ -25,23 +25,35 @@ Delightify-level 提供整合包的**运行时最终态**（游戏加载完之�
 ## 2. 查询协议
 
 ```bash
-node scripts/agent-query.mjs <projectPath> <graph|embed> <命令> [参数]
+node scripts/agent-query.mjs [<projectPath>] <graph|embed|scope> <命令> [参数]
 ```
 
 - stdout **只有** JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。
 - 先看 `ok`，再读 `data`。失败时退出码非 0。
+- id 不存在时 `ok: false`，看 `did_you_mean`，不要自己编一个注册名再查。
+- `<projectPath>` 可省略（`DL_PROJECT` 或从当前目录上溯）。
 - 不要把 `project.db` 整库或 `SELECT * FROM items` 的结果塞进上下文。
 
 ### graph（本地，导入后即可用）
 
 ```bash
 node scripts/agent-query.mjs <p> graph stats
-node scripts/agent-query.mjs <p> graph usages <itemId>
+node scripts/agent-query.mjs <p> graph usages <itemId> [--limit n]
 node scripts/agent-query.mjs <p> graph closure <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept] [--max-nodes n] [--near-misses n]
 node scripts/agent-query.mjs <p> graph neighbors <nodeId> [--depth 1-3] [--relation member_of|input_of|output_of|obtained_from] [--direction out|in|both]
 node scripts/agent-query.mjs <p> graph path <from> <to> [--max-depth n]
 node scripts/agent-query.mjs <p> graph rebuild
 ```
+
+### scope（人审闭集）
+
+```bash
+node scripts/agent-query.mjs <p> scope create pasta minecraft:wheat --policy same-concept
+node scripts/agent-query.mjs <p> scope show pasta
+node scripts/present-serve.mjs <p> --scope pasta
+```
+
+人看包里有什么、勾 id 导出，开同一个进程的 `/b`（图鉴）。那是未审核的临时集合，不要当成 `scope` 或 `saturated` 闭集。
 
 节点：`item:<id>`、`tag:<id>`、`recipe:<id>`、`loot:<category>:<sourceId>`。`neighbors` / `path` / `closure` 可省略 `item:`。
 
@@ -77,6 +89,8 @@ node scripts/agent-query.mjs <p> embed similar <itemId> [--top n]
 | 「这东西怎么获得」 | `graph closure <itemId> --policy obtainability` |
 | 「这两种东西能不能转化」 | `graph path a b` |
 | 「和这块木板同类的」 | `graph closure <itemId> --policy same-concept`，或 `embed similar <itemId>` |
+| 「人来审这个集合」 | `scope create <name> <种子...>`，把 `present-serve --scope <name>` 的 URL 交给作者 |
+| 「打开图鉴勾一些 id」 | 让作者打开 `present-serve` 的 `/b`。导出的是未审核临时列表，不是 scope |
 | 「这个 tag 里有谁」 | `graph neighbors tag:<tagId> --relation member_of --direction in` |
 | 改完要写脚本 | 见 §5。先查证，id 必须来自查询结果 |
 
@@ -92,7 +106,7 @@ node scripts/agent-query.mjs <p> embed similar <itemId> [--top n]
 - **跨 mod 同概念会漏。** 同一样东西可能有五个 mod 各自的 id；`--policy same-concept` 能沿共享 tag 补一部分，但没有共享 tag 的补不了。
 - **`closure` 报 `saturated: false` 时结果不全。** 别当成全集用。看 `frontier` 决定放宽哪个 `--max-*`，或把边界交还作者。
 - **扫一眼 `nearMisses`。** 它是「与闭集相邻但没被纳入」的节点，语义漏检最常藏在这里。
-- **拿不准就把不确定性交还作者**，列出你找到的集合、`frontier` 和 `nearMisses`，别自己拍板。
+- **拿不准就把不确定性交还作者**，列出你找到的集合、`frontier` 和 `nearMisses`，别自己拍板。边界需要人看时，用 `scope create` 固化，再请作者打开 `present-serve` 的审核页；`status` 还是 `draft` 的 scope 不要当成已审集合去写盘。
 
 ## 5. CLI 还没有、库里已有的
 

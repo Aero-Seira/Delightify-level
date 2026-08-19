@@ -370,6 +370,51 @@ export const detectReports = sqliteTable('detect_reports', {
   updatedAt: text('updated_at').notNull(),
 });
 
+/**
+ * 呈现层 scope（派生，不进快照）。成员 = (closure_nodes ∪ extras) − exclusions。
+ */
+export const scopes = sqliteTable('scopes', {
+  id: text('id').primaryKey(),
+  policy: text('policy').notNull(),
+  status: text('status').notNull(),
+  saturated: integer('saturated'),
+  iterations: integer('iterations'),
+  limitsJson: text('limits_json'),
+  truncatedJson: text('truncated_json'),
+  frontierJson: text('frontier_json').notNull(),
+  nearMissesJson: text('near_misses_json').notNull(),
+  closureNodesJson: text('closure_nodes_json').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  computedAt: text('computed_at'),
+  reviewedAt: text('reviewed_at'),
+  source: text('source').notNull(),
+});
+
+export const scopeSeeds = sqliteTable('scope_seeds', {
+  scopeId: text('scope_id').notNull(),
+  nodeId: text('node_id').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.scopeId, table.nodeId] }),
+}));
+
+export const scopeExtras = sqliteTable('scope_extras', {
+  scopeId: text('scope_id').notNull(),
+  nodeId: text('node_id').notNull(),
+  source: text('source').notNull(),
+  generatedAt: text('generated_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.scopeId, table.nodeId] }),
+}));
+
+export const scopeExclusions = sqliteTable('scope_exclusions', {
+  scopeId: text('scope_id').notNull(),
+  nodeId: text('node_id').notNull(),
+  generatedAt: text('generated_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.scopeId, table.nodeId] }),
+}));
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -402,3 +447,7 @@ export type IntentSpecRow = typeof intentSpecs.$inferSelect;
 export type GateReviewRow = typeof gateReviews.$inferSelect;
 export type GuidedSessionRow = typeof guidedSessions.$inferSelect;
 export type DetectReportRow = typeof detectReports.$inferSelect;
+export type ScopeRow = typeof scopes.$inferSelect;
+export type ScopeSeedRow = typeof scopeSeeds.$inferSelect;
+export type ScopeExtraRow = typeof scopeExtras.$inferSelect;
+export type ScopeExclusionRow = typeof scopeExclusions.$inferSelect;

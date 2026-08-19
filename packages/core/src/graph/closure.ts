@@ -19,6 +19,8 @@
  */
 
 import type { Client } from '@libsql/client';
+import { IdNotFoundError, suggestUnknownSeeds } from '../lookup/suggest';
+import type { ScoredId } from '../lookup/score';
 import type { GraphNodeRow, GraphNodeType, GraphRelation } from './derive';
 import { loadNodes } from './query';
 
@@ -198,7 +200,13 @@ export interface NearMiss {
 
 export interface ClosureResult {
   policy: ClosurePolicyName;
-  seeds: { requested: string[]; resolved: string[]; unknown: string[] };
+  seeds: {
+    requested: string[];
+    resolved: string[];
+    unknown: string[];
+    /** 不存在的种子各自的 did_you_mean；没有 unknown 时缺省 */
+    didYouMean?: Record<string, ScoredId[]>;
+  };
   /** 闭集内各类型节点数 */
   counts: Record<GraphNodeType, number>;
   /** 闭集全部 node_id，按字典序 */
@@ -300,8 +308,13 @@ export async function closureFrom(
   const seedRows = await loadNodes(client, normalized);
   const resolved = normalized.filter(id => seedRows.has(id)).sort(compareStrings);
   const unknown = normalized.filter(id => !seedRows.has(id)).sort(compareStrings);
+  const unknownSuggestions = unknown.length > 0 ? await suggestUnknownSeeds(client, unknown) : null;
   if (resolved.length === 0) {
-    throw new Error(`种子在图谱中均不存在：${unknown.join(', ')}`);
+    throw new IdNotFoundError(`种子在图谱中均不存在：${unknown.join(', ')}`, {
+      query: unknown.join(', '),
+      suggestions: unknownSuggestions?.suggestions ?? [],
+      truncated: unknownSuggestions?.truncated,
+    });
   }
 
   const limits: PolicyLimits = {
@@ -442,7 +455,12 @@ export async function closureFrom(
 
   const result: ClosureResult = {
     policy: policyName,
-    seeds: { requested, resolved, unknown },
+    seeds: {
+      requested,
+      resolved,
+      unknown,
+      didYouMean: unknownSuggestions?.byQuery,
+    },
     counts,
     nodes,
     frontier: frontierReturned,

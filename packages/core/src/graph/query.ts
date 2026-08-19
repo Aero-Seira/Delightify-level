@@ -84,6 +84,12 @@ export async function loadNodes(client: Client, nodeIds: readonly string[]): Pro
   return map;
 }
 
+export interface UsagesTruncation {
+  returned: number;
+  total: number;
+  by: 'default_limit';
+}
+
 export interface ItemUsages {
   itemId: string;
   display: string | null;
@@ -93,10 +99,40 @@ export interface ItemUsages {
   /** 产出该物品的配方 id */
   outputOfRecipes: string[];
   obtainedFrom: Array<{ category: string | null; sourceId: string | null; lootTableId: string | null }>;
+  limit: number;
+  /** 哪一路被截断了。四路都在限内则整个字段缺省 */
+  truncated?: Partial<Record<'tags' | 'inputOfRecipes' | 'outputOfRecipes' | 'obtainedFrom', UsagesTruncation>>;
 }
 
-/** 物品用途聚合：所属 tag / 作为输入 / 作为产出 / 获取来源 */
-export async function itemUsages(client: Client, itemId: string): Promise<ItemUsages> {
+/** 常见物品在大整合包里能有几百条 input_of，无上限会直接压爆调用方上下文 */
+export const DEFAULT_USAGES_LIMIT = 200;
+
+export interface ItemUsagesOptions {
+  /** 每一路各自的上限，默认 200 */
+  limit?: number;
+}
+
+function capList(
+  values: readonly string[],
+  limit: number,
+): { returned: string[]; truncated?: UsagesTruncation } {
+  if (values.length <= limit) return { returned: [...values] };
+  return {
+    returned: values.slice(0, limit),
+    truncated: { returned: limit, total: values.length, by: 'default_limit' },
+  };
+}
+
+/** 物品用途聚合：所属 tag / 作为输入 / 作为产出 / 获取来源。每一路各自封顶。 */
+export async function itemUsages(
+  client: Client,
+  itemId: string,
+  options: ItemUsagesOptions = {},
+): Promise<ItemUsages> {
+  const limit =
+    Number.isFinite(options.limit) && (options.limit as number) > 0
+      ? Math.floor(options.limit as number)
+      : DEFAULT_USAGES_LIMIT;
   const nodeId = itemNodeId(itemId);
   const out = await edgesFrom(client, nodeId);
   const nodes = await loadNodes(client, [nodeId]);
@@ -104,7 +140,7 @@ export async function itemUsages(client: Client, itemId: string): Promise<ItemUs
   const tags: string[] = [];
   const inputOfRecipes = new Set<string>();
   const outputOfRecipes = new Set<string>();
-  const obtainedFrom: ItemUsages['obtainedFrom'] = [];
+  const obtainedFromAll: ItemUsages['obtainedFrom'] = [];
 
   for (const edge of out) {
     if (edge.relation === 'member_of') {
@@ -117,7 +153,7 @@ export async function itemUsages(client: Client, itemId: string): Promise<ItemUs
       // loot:<category>:<sourceId>
       const rest = edge.to_node_id.slice('loot:'.length);
       const at = rest.indexOf(':');
-      obtainedFrom.push({
+      obtainedFromAll.push({
         category: at >= 0 ? rest.slice(0, at) : null,
         sourceId: at >= 0 ? rest.slice(at + 1) : rest,
         lootTableId: edge.evidence,
@@ -125,13 +161,27 @@ export async function itemUsages(client: Client, itemId: string): Promise<ItemUs
     }
   }
 
+  const cappedTags = capList(tags.sort(), limit);
+  const cappedInputs = capList([...inputOfRecipes].sort(), limit);
+  const cappedOutputs = capList([...outputOfRecipes].sort(), limit);
+
+  const truncated: NonNullable<ItemUsages['truncated']> = {};
+  if (cappedTags.truncated) truncated.tags = cappedTags.truncated;
+  if (cappedInputs.truncated) truncated.inputOfRecipes = cappedInputs.truncated;
+  if (cappedOutputs.truncated) truncated.outputOfRecipes = cappedOutputs.truncated;
+  if (obtainedFromAll.length > limit) {
+    truncated.obtainedFrom = { returned: limit, total: obtainedFromAll.length, by: 'default_limit' };
+  }
+
   return {
     itemId,
     display: nodes.get(nodeId)?.display ?? null,
-    tags: tags.sort(),
-    inputOfRecipes: [...inputOfRecipes].sort(),
-    outputOfRecipes: [...outputOfRecipes].sort(),
-    obtainedFrom,
+    tags: cappedTags.returned,
+    inputOfRecipes: cappedInputs.returned,
+    outputOfRecipes: cappedOutputs.returned,
+    obtainedFrom: obtainedFromAll.slice(0, limit),
+    limit,
+    truncated: Object.keys(truncated).length > 0 ? truncated : undefined,
   };
 }
 

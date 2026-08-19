@@ -6,16 +6,24 @@
  * 游戏事实图谱与物品向量，stdout 输出 JSON：{ ok, data?, error? }，
  * 退出码非 0 即失败。使用前需 pnpm build。
  *
- * 用法：
- *   node scripts/agent-query.mjs <projectPath> graph stats
- *   node scripts/agent-query.mjs <projectPath> graph usages <itemId>
- *   node scripts/agent-query.mjs <projectPath> graph closure <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept] [--max-iterations n] [--max-nodes n] [--max-fanout n] [--near-misses n] [--detail ids|full]
- *   node scripts/agent-query.mjs <projectPath> graph neighbors <nodeId> [--relation member_of|input_of|output_of|obtained_from] [--direction out|in|both] [--depth 1-3]
- *   node scripts/agent-query.mjs <projectPath> graph path <fromNodeId> <toNodeId> [--max-depth n]
- *   node scripts/agent-query.mjs <projectPath> graph rebuild
- *   node scripts/agent-query.mjs <projectPath> embed build
- *   node scripts/agent-query.mjs <projectPath> embed search <文本> [--top n]
- *   node scripts/agent-query.mjs <projectPath> embed similar <itemId> [--top n]
+ * 用法（<projectPath> 可省略：读 DL_PROJECT，或从 cwd 上溯 .delightify-level/）：
+ *   node scripts/agent-query.mjs [<projectPath>] graph stats
+ *   node scripts/agent-query.mjs --project <projectPath> graph stats
+ *   node scripts/agent-query.mjs graph usages <itemId> [--limit n]
+ *   node scripts/agent-query.mjs graph closure <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept] [--max-iterations n] [--max-nodes n] [--max-fanout n] [--near-misses n] [--detail ids|full]
+ *   node scripts/agent-query.mjs graph neighbors <nodeId> [--relation member_of|input_of|output_of|obtained_from] [--direction out|in|both] [--depth 1-3]
+ *   node scripts/agent-query.mjs graph path <fromNodeId> <toNodeId> [--max-depth n]
+ *   node scripts/agent-query.mjs graph rebuild
+ *   node scripts/agent-query.mjs embed build
+ *   node scripts/agent-query.mjs embed search <文本> [--top n]
+ *   node scripts/agent-query.mjs embed similar <itemId> [--top n]
+ *   node scripts/agent-query.mjs scope create <name> <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept]
+ *   node scripts/agent-query.mjs scope list
+ *   node scripts/agent-query.mjs scope show <name> [--members-limit n]
+ *   node scripts/agent-query.mjs scope add <name> <nodeId>
+ *   node scripts/agent-query.mjs scope drop <name> <nodeId>
+ *   node scripts/agent-query.mjs scope recompute <name>
+ *   node scripts/agent-query.mjs scope review <name>
  *
  * embed 子命令经环境变量配置 provider：
  *   OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_EMBEDDING_MODEL（默认 text-embedding-3-small）
@@ -26,26 +34,49 @@
  * 文档：docs/using.md（工作方式）、docs/cli.md（参数表）
  */
 import { createClient } from '@libsql/client';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { rebuildGraph } from '../packages/core/dist/graph/build.js';
 import { graphStats, itemUsages, graphNeighbors, graphPath } from '../packages/core/dist/graph/query.js';
 import { closureFrom } from '../packages/core/dist/graph/closure.js';
 import { buildEmbeddings, searchByText, searchSimilarItems } from '../packages/core/dist/embedding/index.js';
 import { createLLMService } from '../packages/core/dist/llm/index.js';
+import {
+  addToScope,
+  createScope,
+  dropFromScope,
+  listScopes,
+  recomputeScope,
+  reviewScope,
+  showScope,
+} from '../packages/core/dist/scope/index.js';
+import { IdNotFoundError, requireId, resolveProject } from '../packages/core/dist/lookup/index.js';
 
 const NODE_PREFIXES = ['item:', 'tag:', 'recipe:', 'loot:'];
+const DOMAINS = new Set(['graph', 'embed', 'scope']);
 
 function ok(data) {
   process.stdout.write(JSON.stringify({ ok: true, data }, null, 2) + '\n');
 }
 
-function fail(error, usage = false) {
-  process.stdout.write(JSON.stringify({ ok: false, error: String(error) }, null, 2) + '\n');
+function fail(error, usage = false, extra = {}) {
+  const body = { ok: false, error: String(error), ...extra };
+  process.stdout.write(JSON.stringify(body, null, 2) + '\n');
   if (usage) {
     process.stderr.write('用法见 scripts/agent-query.mjs 头部注释或 AGENT.md\n');
   }
   process.exit(1);
+}
+
+function failCaught(error, usage = false) {
+  if (error instanceof IdNotFoundError || error?.name === 'IdNotFoundError') {
+    fail(error.message, usage, {
+      did_you_mean: error.didYouMean ?? [],
+      truncated: error.truncated,
+    });
+  }
+  if (error?.name === 'ProjectNotFoundError') {
+    fail(error.message, true);
+  }
+  fail(error instanceof Error ? error.message : error, usage);
 }
 
 /** 解析 --key value 形式的选项 */
@@ -79,16 +110,40 @@ function numberFlag(flags, key) {
   return value;
 }
 
-async function main() {
-  const [projectPath, domain, command, ...rest] = process.argv.slice(2);
-  if (!projectPath || !domain || !command) fail('参数不足：<projectPath> <graph|embed> <command>', true);
+function splitInvocation(positional, flags) {
+  const flagged = flags.project ?? flags.p;
+  if (positional[0] && DOMAINS.has(positional[0])) {
+    return { explicit: flagged, domain: positional[0], command: positional[1], cmdArgs: positional.slice(2) };
+  }
+  if (positional[1] && DOMAINS.has(positional[1])) {
+    return {
+      explicit: flagged ?? positional[0],
+      domain: positional[1],
+      command: positional[2],
+      cmdArgs: positional.slice(3),
+    };
+  }
+  fail('参数不足：[projectPath] <graph|embed|scope> <command>（或设 DL_PROJECT / 在项目目录下执行）', true);
+}
 
-  const dbPath = path.join(projectPath, '.delightify-level', 'project.db');
-  if (!fs.existsSync(dbPath)) {
-    fail(`项目库不存在：${dbPath}（请确认 projectPath 是 Delightify-level 项目根，且已导入过数据）`);
+async function main() {
+  const parsed = parseFlags(process.argv.slice(2));
+  const { explicit, domain, command, cmdArgs } = splitInvocation(parsed.positional, parsed.flags);
+  if (!domain || !command) fail('参数不足：[projectPath] <graph|embed|scope> <command>', true);
+
+  let project;
+  try {
+    project = resolveProject({ explicit, cwd: process.cwd(), env: process.env });
+  } catch (error) {
+    failCaught(error, true);
+  }
+  const dbPath = project.dbPath;
+  if (project.source !== 'explicit') {
+    process.stderr.write(`project ${project.projectPath}（${project.source === 'env' ? 'DL_PROJECT' : 'cwd'}）\n`);
   }
 
-  const { flags, positional } = parseFlags(rest);
+  const flags = parsed.flags;
+  const positional = cmdArgs;
 
   // graph rebuild 自管连接
   if (domain === 'graph' && command === 'rebuild') {
@@ -105,7 +160,8 @@ async function main() {
       } else if (command === 'usages') {
         const itemId = positional[0];
         if (!itemId) fail('graph usages 需要 <itemId>', true);
-        ok(await itemUsages(db, itemId));
+        const canonical = await requireId(db, itemId, { kinds: ['item'], label: '物品' });
+        ok(await itemUsages(db, canonical, { limit: numberFlag(flags, 'limit') }));
       } else if (command === 'closure') {
         if (positional.length === 0) fail('graph closure 需要至少一个 <seed>', true);
         if (flags.detail !== undefined && flags.detail !== 'ids' && flags.detail !== 'full') {
@@ -122,7 +178,8 @@ async function main() {
       } else if (command === 'neighbors') {
         const nodeId = positional[0];
         if (!nodeId) fail('graph neighbors 需要 <nodeId>', true);
-        ok(await graphNeighbors(db, normalizeNodeId(nodeId), {
+        const canonical = await requireId(db, normalizeNodeId(nodeId), { kinds: ['node'], label: '节点' });
+        ok(await graphNeighbors(db, canonical, {
           relation: flags.relation,
           direction: flags.direction,
           depth: flags.depth ? Number(flags.depth) : undefined,
@@ -130,7 +187,9 @@ async function main() {
       } else if (command === 'path') {
         const [fromId, toId] = positional;
         if (!fromId || !toId) fail('graph path 需要 <fromNodeId> <toNodeId>', true);
-        ok(await graphPath(db, normalizeNodeId(fromId), normalizeNodeId(toId), flags['max-depth'] ? Number(flags['max-depth']) : 4));
+        const from = await requireId(db, normalizeNodeId(fromId), { kinds: ['node'], label: '起点' });
+        const to = await requireId(db, normalizeNodeId(toId), { kinds: ['node'], label: '终点' });
+        ok(await graphPath(db, from, to, flags['max-depth'] ? Number(flags['max-depth']) : 4));
       } else {
         fail(`未知 graph 子命令：${command}`, true);
       }
@@ -146,16 +205,62 @@ async function main() {
       } else if (command === 'similar') {
         const itemId = positional[0];
         if (!itemId) fail('embed similar 需要 <itemId>', true);
-        ok(await searchSimilarItems(db, itemId, flags.top ? Number(flags.top) : 10));
+        const canonical = await requireId(db, itemId, { kinds: ['item'], label: '物品' });
+        ok(await searchSimilarItems(db, canonical, flags.top ? Number(flags.top) : 10));
       } else {
         fail(`未知 embed 子命令：${command}`, true);
       }
+    } else if (domain === 'scope') {
+      if (command === 'create') {
+        const name = positional[0];
+        const seeds = positional.slice(1);
+        if (!name || seeds.length === 0) fail('scope create 需要 <name> <seed> [<seed>...]', true);
+        ok(await createScope(db, {
+          id: name,
+          seeds,
+          policy: flags.policy,
+          maxIterations: numberFlag(flags, 'max-iterations'),
+          maxNodes: numberFlag(flags, 'max-nodes'),
+          maxFanout: numberFlag(flags, 'max-fanout'),
+          nearMissLimit: numberFlag(flags, 'near-misses'),
+        }));
+      } else if (command === 'list') {
+        ok(await listScopes(db));
+      } else if (command === 'show') {
+        const name = positional[0];
+        if (!name) fail('scope show 需要 <name>', true);
+        ok(await showScope(db, name, { membersLimit: numberFlag(flags, 'members-limit') }));
+      } else if (command === 'add') {
+        const [name, nodeId] = positional;
+        if (!name || !nodeId) fail('scope add 需要 <name> <nodeId>', true);
+        const canonical = await requireId(db, normalizeNodeId(nodeId), { kinds: ['node'], label: '节点' });
+        ok(await addToScope(db, name, canonical));
+      } else if (command === 'drop') {
+        const [name, nodeId] = positional;
+        if (!name || !nodeId) fail('scope drop 需要 <name> <nodeId>', true);
+        ok(await dropFromScope(db, name, nodeId));
+      } else if (command === 'recompute') {
+        const name = positional[0];
+        if (!name) fail('scope recompute 需要 <name>', true);
+        ok(await recomputeScope(db, name, {
+          maxIterations: numberFlag(flags, 'max-iterations'),
+          maxNodes: numberFlag(flags, 'max-nodes'),
+          maxFanout: numberFlag(flags, 'max-fanout'),
+          nearMissLimit: numberFlag(flags, 'near-misses'),
+        }));
+      } else if (command === 'review') {
+        const name = positional[0];
+        if (!name) fail('scope review 需要 <name>', true);
+        ok(await reviewScope(db, name));
+      } else {
+        fail(`未知 scope 子命令：${command}`, true);
+      }
     } else {
-      fail(`未知域：${domain}（graph | embed）`, true);
+      fail(`未知域：${domain}（graph | embed | scope）`, true);
     }
   } finally {
     db.close();
   }
 }
 
-main().catch(error => fail(error instanceof Error ? error.message : error));
+main().catch(error => failCaught(error));

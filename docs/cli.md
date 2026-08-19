@@ -3,23 +3,23 @@
 工作方式见 [`using.md`](./using.md)。本文只列 `agent-query` 的参数。
 
 ```bash
-node scripts/agent-query.mjs <projectPath> <graph|embed> <命令> [参数]
+node scripts/agent-query.mjs [<projectPath>] <graph|embed|scope> <命令> [参数]
 ```
 
-stdout 仅 JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。
+`<projectPath>` 可省略：`--project <path>`、环境变量 `DL_PROJECT`、或从 cwd 上溯 `.delightify-level/project.db`。stdout 仅 JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。id 不存在时另有 `did_you_mean`（候选 id 列表，带 `score` / `reason`）。
 
 ## graph
 
 ```
 stats
-usages <itemId>
+usages <itemId> [--limit n]
 closure <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept] [--max-iterations n] [--max-nodes n] [--max-fanout n] [--near-misses n] [--detail ids|full]
 neighbors <nodeId> [--depth 1-3] [--relation member_of|input_of|output_of|obtained_from] [--direction out|in|both]
 path <from> <to> [--max-depth n]
 rebuild
 ```
 
-`neighbors` / `path` / `closure` 可省略 `item:` 前缀。
+`neighbors` / `path` / `closure` 可省略 `item:` 前缀。`usages` 每一路（tag / 输入配方 / 输出配方 / 来源）默认最多 200 条，超限填 `truncated`；`--limit` 改这个上限。`usages` / `neighbors` / `path` 在 id 不存在时 `ok: false` 并带 `did_you_mean`。
 
 ### closure
 
@@ -37,7 +37,7 @@ rebuild
 
 | 字段 | 含义 |
 |---|---|
-| `seeds` | `requested` / `resolved` / `unknown`。有不存在的种子照常跑，全不存在才 `ok: false` |
+| `seeds` | `requested` / `resolved` / `unknown`。有不存在的种子照常跑，并填 `didYouMean`；全不存在才 `ok: false` 且顶层带 `did_you_mean` |
 | `counts` / `nodes` | 闭集分类型计数与全部 node_id（字典序） |
 | `saturated` | **是否真到了不动点**。被 `maxNodes` / `maxIterations` / `maxFanout` 截断一律 `false` |
 | `frontier` | 停在哪：`high_fanout`（该节点在某条关系上边太多，`wouldAdd` 是边数）/ `max_nodes` / `max_iterations`，最多 200 条 |
@@ -46,6 +46,32 @@ rebuild
 | `truncated` | 被哪个上限截断了什么，`by` 为 `max_nodes` / `max_iterations` / `frontier_limit` / `near_miss_limit` |
 
 `saturated: false` 意味着**结果可能不全**，看 `frontier` 决定是放宽哪个上限还是就此交给作者。
+
+## scope
+
+把一次 `graph closure` 固化成可审核对象。种子必须是 id，不做自然语言召回。
+
+```
+create <name> <seed> [<seed>...] [--policy recipe-impact|obtainability|same-concept] [--max-iterations n] [--max-nodes n] [--max-fanout n] [--near-misses n]
+list
+show <name> [--members-limit n]
+add <name> <nodeId>
+drop <name> <nodeId>
+recompute <name> [--max-iterations n] [--max-nodes n] [--max-fanout n] [--near-misses n]
+review <name>
+```
+
+`name` 须匹配 `^[a-z][a-z0-9_-]{0,63}$`。`add` 的节点不存在时 `ok: false` 并带 `did_you_mean`。
+
+成员公式：`(上次闭包节点 ∪ extras) − exclusions`。`add` / `drop` 只改 extras / exclusions；`recompute` 仍用原种子跑闭包。`show` 的 `members` 默认最多 200，超限填 `truncated`。`counts` 始终是全量。
+
+人审页面（长驻进程，不是 `agent-query`）：
+
+```
+node scripts/present-serve.mjs [<projectPath>] [--port 7450] [--scope <name>]
+```
+
+stdout 一行 `{ ok, data: { url, port, scope, browse } }`，之后只写 stderr。只绑 `127.0.0.1`。`/` 是审 scope；`/b` 是图鉴（人用过滤，不是 agent 检索管线，不挂到 `agent-query`）。
 
 ## embed
 
@@ -57,4 +83,4 @@ search <文本> [--top n]
 similar <itemId> [--top n]
 ```
 
-`OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_EMBEDDING_MODEL`，或 `OLLAMA_ENDPOINT` / `OLLAMA_EMBEDDING_MODEL`。`LLM_ACTIVE_PROFILE=openai-api|ollama-local`。
+`similar` 在物品不存在时 `ok: false` 并带 `did_you_mean`。`OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_EMBEDDING_MODEL`，或 `OLLAMA_ENDPOINT` / `OLLAMA_EMBEDDING_MODEL`。`LLM_ACTIVE_PROFILE=openai-api|ollama-local`。

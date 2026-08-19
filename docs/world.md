@@ -20,6 +20,8 @@ Delightify-level 把一个整合包实例在游戏里**已经加载完成的状�
 
 **向量**（显式构建）：`item_embeddings`，用于自然语言检索和相似物品。
 
+**scope**（呈现层派生）：`scopes` / `scope_seeds` / `scope_extras` / `scope_exclusions`。人审过的闭集，不是导出事实。
+
 ## 工具
 
 只读：物品/配方检索、图谱 usages / neighbors / path、unify 同名查询、blast 影响面、engine dry-run、KubeJS preview。
@@ -32,11 +34,11 @@ Delightify-level 把一个整合包实例在游戏里**已经加载完成的状�
 
 带 `@delightify-level-generated` 标记。不覆盖手写脚本。须由调用方确认后再写。
 
-当前接到 CLI 的只有 `graph` 与 `embed`。其余在 `@delightify/core`，尚未挂到 `agent-query`。
+当前接到 CLI 的有 `graph`、`embed`、`scope`。本地 web 是 `scripts/present-serve.mjs`：`/` 审 scope，`/b` 图鉴。图鉴不挂到 `agent-query`。其余在 `@delightify/core`，尚未挂到 `agent-query`。
 
 ## 边界
 
-- 不做桌面工作台，不做应用内对话 Agent。
+- 不做桌面工作台，不做应用内对话 Agent。本地 web 可以有浏览层（图鉴 / 选取 / 导出 ID）和呈现层（审 scope），二者分开，见 [`design.md`](./design.md) §3.1。
 - 不做设计/平衡判断。模型可以查世界、出变更预览；改多少、并成谁，由作者在自己的 harness 里定。
 - 不要把整份 `project.db` 塞进上下文，用查询取片段。
 

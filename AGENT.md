@@ -30,13 +30,17 @@ pnpm typecheck      # 唯一的自动化校验手段
 | `packages/core/src/database/` | `schema.ts` drizzle 表定义；`schema-manager.ts` 建表/建索引/迁移的声明式注册表 |
 | `packages/core/src/mod-data-importer/` | 读快照 → 写 `project.db`，含 `loot-sources` 派生与 `validator` |
 | `packages/core/src/graph/` | `build.ts` 物化图谱，`query.ts` stats/usages/neighbors/path，`closure.ts` 闭包扩张与边界报告，`derive.ts` 派生 |
+| `packages/core/src/lookup/` | `did_you_mean`（编辑距离）与 `projectPath` 发现。确定性，不进模型 |
+| `packages/core/src/browse/` | 浏览层查询：物品/配方过滤、分面、画布读取、图标字节。人用过滤，不进 `agent-query` |
+| `packages/core/src/scope/` | 呈现层后端：闭包结果固化为可 add/drop/review 的 scope |
+| `packages/present/static/` | 人审页 + 图鉴页；由 `scripts/present-serve.mjs` 提供（`/` 与 `/b`） |
 | `packages/core/src/embedding/` | `text.ts` 组装待嵌入文本（纯函数），`build.ts` 增量构建，`search.ts` 检索 |
 | `packages/core/src/engine/` | `ir.ts` 变更 IR，`actions/*` 与 `composites/*` 各动作的 dry-run，`blast-radius.ts` 影响面，`dispatch.ts` 分发 |
 | `packages/core/src/unify/` | 跨 mod 同概念候选与合并预览 |
 | `packages/core/src/export/` | `kubejs-emitter.ts` 生成受管脚本；写盘、撤销 |
 | `packages/core/src/llm/` | provider 抽象（openai / ollama / anthropic），目前只被 embedding 用 |
 | `packages/shared/src/types/` | 跨包类型 |
-| `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`graph` / `embed` 两个域 |
+| `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`graph` / `embed` / `scope` |
 
 `packages/core/src/index.ts` 把所有子模块 `export *`。新增子模块记得挂上去。
 
@@ -56,7 +60,7 @@ pnpm typecheck      # 唯一的自动化校验手段
 
 **4.6 快照 schema 三处同步。** 改导出表结构必须同时改 `packages/exporter` 的 `db/Schema.java`、`packages/core` 的 importer 与 `database/schema*.ts`、以及 [`docs/contract.md`](docs/contract.md)，并升高 `schema_version`（当前 **3**）。少改一处就是静默的数据损坏。
 
-**4.7 不复活 IDE 遗留。** 本仓不加 Electron 壳、聊天框、工作台 UI、应用内 agent 编排、Intent Spec、Gate、Knowledge Center。见 [`docs/design.md`](docs/design.md) §11。
+**4.7 不复活 IDE 遗留。** 本仓不加 Electron 壳、聊天框、工作台 UI、应用内 agent 编排、Intent Spec、Gate、Knowledge Center。见 [`docs/design.md`](docs/design.md) §11。允许本地 web 的**浏览层**（图鉴 / 选取 / 导出 ID）和**呈现层**（人审 scope），见设计 §3 / §3.1；二者分开，都不得长回工作台或编辑器。从 Delightify-IDE 只许复用只读浏览所需的图标与查询，不搬动作入口和工作台壳。
 
 ## 5. 常见改动怎么做
 
@@ -76,18 +80,22 @@ pnpm typecheck      # 唯一的自动化校验手段
 
 | 位置 | 问题 |
 |---|---|
-| `graph/query.ts` `itemUsages` | **无结果上限**。大整合包里改一个常见物品会返回几百条，直接压爆调用方上下文。`graphNeighbors` 已有 `MAX_VISITED = 2000` 可参照 |
+| `graph/query.ts` `itemUsages` | ~~无结果上限~~ 已加 `limit`（默认 200）与 `truncated` |
 | `embedding/search.ts` | 检索时 `SELECT item_id, vector, source_text FROM item_embeddings` **全量载入内存**再算相似度。数万物品规模下需要改增量或近似检索 |
 | `database/schema-manager.ts` | 仍带 IDE 时代的遗留表：`plans` / `plan_snapshots` / `agent_runs` / `intent_specs` / `gate_reviews` / `guided_sessions` / `detect_reports`。按 4.7 它们不属于本项目，应清理 |
 | `agent-query.mjs` | 硬编码 `../packages/core/dist/*` 相对路径，要求使用者 clone 并构建本仓。应改为发布 `dl` bin |
-| `agent-query.mjs` | `projectPath` 是强制位置参数。应支持从 cwd 上溯发现 `.delightify-level/` 或读 `DL_PROJECT` |
+| `agent-query.mjs` | ~~`projectPath` 强制位置参数~~ 已支持省略：`--project` / `DL_PROJECT` / cwd 上溯 |
 | 全局 | 无测试框架 |
 
 ## 7. 现在该做什么
 
 路线图见 [`docs/design.md`](docs/design.md) §10。**`graph closure` 已完成**（闭包扩张 + `frontier` + `near_misses`，见 `graph/closure.ts` 与 [`docs/plans/graph-closure.md`](docs/plans/graph-closure.md)），关系性遗漏这条已经消掉。
 
-当前第一优先是**响应契约补全**：`graph usages` 补上限（见 §6）、id 不存在时给 `did_you_mean`、`projectPath` 从 cwd 上溯发现。都是小活，且能立刻减少调用方踩坑。
+**呈现层已有第一刀**（`scope` CLI + `present-serve` 审核页，见 [`docs/plans/presentation-layer.md`](docs/plans/presentation-layer.md)）。自然语言建 scope 仍未做。
+
+**浏览层已有第一刀**（`/b` 图鉴 + 选取导出 + 降级画布，见 [`docs/plans/browse-layer.md`](docs/plans/browse-layer.md)）。JEI `recipe_views` 采集、把选取喂给 `scope create` 以外的动作都还没做。
+
+**响应契约补全已有第一刀**（`did_you_mean`、项目发现、`graph usages` 上限）。下一步仍是路线图第 4 项 `dl index` / `dl map`，或问作者要不要先做自然语言建 scope / JEI 采集。
 
 不确定优先级时问作者，不要自行扩大范围。
 

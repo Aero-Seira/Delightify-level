@@ -344,6 +344,61 @@ export const CORE_TABLES: TableDef[] = [
       { name: 'value', type: 'TEXT', nullable: false },
     ],
   },
+  {
+    // 呈现层派生：人审闭集。不进快照，见 packages/core/src/scope/
+    name: 'scopes',
+    columns: [
+      { name: 'id', type: 'TEXT', primaryKey: true },
+      { name: 'policy', type: 'TEXT', nullable: false },
+      { name: 'status', type: 'TEXT', nullable: false },
+      { name: 'saturated', type: 'INTEGER', nullable: true },
+      { name: 'iterations', type: 'INTEGER', nullable: true },
+      { name: 'limits_json', type: 'TEXT', nullable: true },
+      { name: 'truncated_json', type: 'TEXT', nullable: true },
+      { name: 'frontier_json', type: 'TEXT', nullable: false },
+      { name: 'near_misses_json', type: 'TEXT', nullable: false },
+      { name: 'closure_nodes_json', type: 'TEXT', nullable: false },
+      { name: 'created_at', type: 'TEXT', nullable: false },
+      { name: 'updated_at', type: 'TEXT', nullable: false },
+      { name: 'computed_at', type: 'TEXT', nullable: true },
+      { name: 'reviewed_at', type: 'TEXT', nullable: true },
+      { name: 'source', type: 'TEXT', nullable: false },
+    ],
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_scopes_updated_at ON scopes(updated_at)',
+      'CREATE INDEX IF NOT EXISTS idx_scopes_status ON scopes(status)',
+    ],
+  },
+  {
+    name: 'scope_seeds',
+    columns: [
+      { name: 'scope_id', type: 'TEXT', nullable: false },
+      { name: 'node_id', type: 'TEXT', nullable: false },
+    ],
+    constraints: ['PRIMARY KEY(scope_id, node_id)'],
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_scope_seeds_scope ON scope_seeds(scope_id)'],
+  },
+  {
+    name: 'scope_extras',
+    columns: [
+      { name: 'scope_id', type: 'TEXT', nullable: false },
+      { name: 'node_id', type: 'TEXT', nullable: false },
+      { name: 'source', type: 'TEXT', nullable: false },
+      { name: 'generated_at', type: 'TEXT', nullable: false },
+    ],
+    constraints: ['PRIMARY KEY(scope_id, node_id)'],
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_scope_extras_scope ON scope_extras(scope_id)'],
+  },
+  {
+    name: 'scope_exclusions',
+    columns: [
+      { name: 'scope_id', type: 'TEXT', nullable: false },
+      { name: 'node_id', type: 'TEXT', nullable: false },
+      { name: 'generated_at', type: 'TEXT', nullable: false },
+    ],
+    constraints: ['PRIMARY KEY(scope_id, node_id)'],
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_scope_exclusions_scope ON scope_exclusions(scope_id)'],
+  },
 ];
 
 // 扩展字段表（用于存储从 manifest 或其他来源动态添加的字段）
