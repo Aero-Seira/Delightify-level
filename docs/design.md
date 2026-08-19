@@ -160,7 +160,7 @@ Skill 与 MCP 不是二选一，是不同层：skill 封装**知识层**，MCP �
 
 **MCP 排第二，且要薄。** 服务于无 shell 环境。只暴露 5 个左右任务级工具（`find_scope` / `impact` / `map` / `preview_script`），**不做 CLI 命令到 MCP 工具的一一映射**——把"召回后必须核对"这类流程烧进实现里，而不是指望模型照做。
 
-**指令文档单一来源 + generator [计划]。** `SKILL.md` / `AGENTS.md` / Cursor `.mdc` / `copilot-instructions.md` 从 `docs/using.md` 生成，`dl init <harness>` 装进用户的实例目录。**绝不手维护多份**——漂移的文档比没有文档更糟。
+**指令文档单一来源 + generator [已有]。** `SKILL.md`（Claude Code 目录式，带 `reference/`）与 `AGENTS.md` 由 `scripts/skill-gen.mjs` 从 `docs/using.md` 生成，`dl skill --install` 装进 harness。Cursor `.mdc` / `copilot-instructions.md` 仍 [计划]，加一个 harness 只是在 `packages/skill/config.mjs` 里多一条 `wrap`。**绝不手维护多份**——漂移的文档比没有文档更糟，所以 `dl skill --check` 在产物与源文档不一致时退出码非 0，可挂 CI。
 
 ## 8. 响应契约
 
@@ -199,7 +199,7 @@ Skill 与 MCP 不是二选一，是不同层：skill 封装**知识层**，MCP �
 3. ~~**响应契约补全**~~ **[已有]**：`did_you_mean`、`projectPath` 自动发现、`graph usages` 上限。剩下的是调用方体验（`dl` bin），进第 6 项。
 4. **`dl index` + `dl map`**：工作量最大，解决"不知道有什么"的根问题。
 5. **种子召回**（§4.1 的非 embedding 几路）+ scope 接自然语言 + 呈现层补全：scope 持久化与审核页 **[部分]**（见 §6），缺的是宽召回和 `confidence`。
-6. **打包与分发**：`dl` bin、npx 免构建、skill generator、MCP 薄适配。
+6. **打包与分发**：~~`dl` bin~~ **[已有]**（`bin/dl`，尚未发 npm）、~~skill generator~~ **[已有]**；npx 免构建、去原生依赖、MCP 薄适配仍 [计划]。
 
 **浏览层是独立轨道**（§3.1），不插入上面的性价比队列，也不替代第 5 项。**已有第一刀**：`present-serve` 的 `/b`（图鉴 / 过滤 / 选取导出 / 降级画布）。配方画布要真正到位，仍等 exporter 补上 `RecipeViewSource`。
 

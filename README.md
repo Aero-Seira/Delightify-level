@@ -44,6 +44,10 @@ node scripts/agent-query.mjs <实例路径> graph stats
 node scripts/agent-query.mjs <实例路径> graph usages minecraft:copper_ingot
 node scripts/agent-query.mjs <实例路径> embed search "铜锭" --top 10
 
+# 装进 agent（skill 从 docs/using.md 生成，别手改产物）
+bin/dl skill --install          # → ~/.claude/skills/delightify-level/
+bin/dl skill --target agents    # → build/skill/agents/AGENTS.md
+
 # 人审闭集（呈现层）
 node scripts/agent-query.mjs <实例路径> scope create copper minecraft:copper_ingot
 node scripts/present-serve.mjs <实例路径> --scope copper

@@ -40,7 +40,9 @@ pnpm typecheck      # 唯一的自动化校验手段
 | `packages/core/src/export/` | `kubejs-emitter.ts` 生成受管脚本；写盘、撤销 |
 | `packages/core/src/llm/` | provider 抽象（openai / ollama / anthropic），目前只被 embedding 用 |
 | `packages/shared/src/types/` | 跨包类型 |
+| `bin/dl` | 统一入口。`dl <域>` → agent-query，`dl serve` → present-serve，`dl skill` → skill-gen |
 | `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`import` / `graph` / `embed` / `scope` |
+| `scripts/skill-gen.mjs` + `packages/skill/config.mjs` | 从 `docs/using.md` 生成 SKILL.md / AGENTS.md。**改指令要改源文档再重生成，不要改产物** |
 
 `packages/core/src/index.ts` 把所有子模块 `export *`。新增子模块记得挂上去。
 

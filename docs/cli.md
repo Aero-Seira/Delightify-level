@@ -1,10 +1,13 @@
 # CLI 参考
 
-工作方式见 [`using.md`](./using.md)。本文只列 `agent-query` 的参数。
+工作方式见 [`using.md`](./using.md)。本文只列参数。
 
 ```bash
+bin/dl [<projectPath>] <import|graph|embed|scope> <命令> [参数]   # 等价于下面这行
 node scripts/agent-query.mjs [<projectPath>] <import|graph|embed|scope> <命令> [参数]
 ```
+
+`bin/dl` 是统一入口：`dl serve` 转 `present-serve.mjs`，`dl skill` 转 `skill-gen.mjs`。
 
 `<projectPath>` 可省略：`--project <path>`、环境变量 `DL_PROJECT`、或从 cwd 上溯 `.delightify-level/project.db`（`import` 还认快照 `dl-exporter/export.sqlite`，那时库还没建出来）。stdout 仅 JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。id 不存在时另有 `did_you_mean`（候选 id 列表，带 `score` / `reason`）。
 
@@ -99,3 +102,21 @@ similar <itemId> [--top n]
 ```
 
 `similar` 在物品不存在时 `ok: false` 并带 `did_you_mean`。`OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_EMBEDDING_MODEL`，或 `OLLAMA_ENDPOINT` / `OLLAMA_EMBEDDING_MODEL`。`LLM_ACTIVE_PROFILE=openai-api|ollama-local`。
+
+## skill
+
+把 `docs/using.md` 生成成可直接装进 agent 的 skill。**内容的单一来源是 `docs/using.md`，不要手改产物。**
+
+```
+dl skill [--target claude|agents] [--out <dir>] [--command <前缀>] [--install] [--check]
+```
+
+| 选项 | 含义 |
+|---|---|
+| `--target claude` | 默认。目录式 `SKILL.md` + `reference/`（cli / world / contract 三份，按需加载） |
+| `--target agents` | 单文件 `AGENTS.md`，给读单文件的 harness |
+| `--install` | 装到该 harness 的默认位置。claude 是 `~/.claude/skills/delightify-level/` |
+| `--command` | 调用前缀。默认钉死本仓 `bin/dl` 的绝对路径；发到 npm 后传 `--command dl` |
+| `--check` | 只校验产物与源文档是否一致，不写盘。**不一致时退出码非 0**，可挂 CI |
+
+生成时会把仓库相对链接改写成 skill 内的相对路径，并去掉「先 `pnpm build`」这类只对本仓开发者成立的话。

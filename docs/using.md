@@ -25,7 +25,7 @@ Delightify-level 提供整合包的**运行时最终态**（游戏加载完之�
 ## 2. 查询协议
 
 ```bash
-node scripts/agent-query.mjs [<projectPath>] <graph|embed|scope> <命令> [参数]
+node scripts/agent-query.mjs [<projectPath>] <import|graph|embed|scope> <命令> [参数]
 ```
 
 - stdout **只有** JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。
@@ -33,6 +33,15 @@ node scripts/agent-query.mjs [<projectPath>] <graph|embed|scope> <命令> [参�
 - id 不存在时 `ok: false`，看 `did_you_mean`，不要自己编一个注册名再查。
 - `<projectPath>` 可省略（`DL_PROJECT` 或从当前目录上溯）。
 - 不要把 `project.db` 整库或 `SELECT * FROM items` 的结果塞进上下文。
+
+### import（其余一切的前置）
+
+```bash
+node scripts/agent-query.mjs <p> import detect
+node scripts/agent-query.mjs <p> import run
+```
+
+`detect` 只看不写，确认快照在哪、是否可用。`run` 执行导入并一并物化图谱，不必再 `graph rebuild`；重复跑是幂等的。大包是分钟级，进度走 stderr。
 
 ### graph（本地，导入后即可用）
 

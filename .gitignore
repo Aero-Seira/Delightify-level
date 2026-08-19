@@ -22,3 +22,6 @@ logs/
 *.log
 
 .vscode/
+
+# skill-gen 产物，由 docs/using.md 生成，不入库
+build/

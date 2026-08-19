@@ -1,0 +1,70 @@
+#!/usr/bin/env node
+/**
+ * dl —— 统一入口。
+ *
+ * 把三个脚本收进一个命令，让 skill / 文档里只出现一个可执行文件名，
+ * 而不是到处写 `node <一长串绝对路径>/scripts/xxx.mjs`。
+ *
+ *   dl <import|graph|embed|scope> ...   查询（scripts/agent-query.mjs）
+ *   dl serve ...                        本地 web：/ 审 scope、/b 图鉴
+ *   dl skill ...                        生成可安装的 skill
+ *
+ * 将来发到 npm 时，package.json 的 bin 指向本文件即可，skill 里的调用前缀
+ * 从绝对路径换成 `dl`，其余不动。
+ */
+import { spawn } from 'node:child_process';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+const ROUTES = {
+  serve: 'scripts/present-serve.mjs',
+  skill: 'scripts/skill-gen.mjs',
+};
+const QUERY = 'scripts/agent-query.mjs';
+const QUERY_DOMAINS = new Set(['import', 'graph', 'embed', 'scope']);
+
+const USAGE = `dl —— Delightify-level 统一入口
+
+  dl import detect|run [--file <快照>]      摄入快照（其余一切的前置）
+  dl graph  stats|usages|closure|neighbors|path|rebuild
+  dl scope  create|list|show|add|drop|recompute|review
+  dl embed  build|search|similar
+  dl serve  [--port 7450] [--scope <name>]  本地 web：/ 审 scope、/b 图鉴
+  dl skill  [--target claude|agents] [--install]
+
+<projectPath> 可省略：--project <path>、DL_PROJECT，或在实例目录下执行。
+参数表见 docs/cli.md。
+`;
+
+const [sub, ...rest] = process.argv.slice(2);
+
+if (!sub || sub === '--help' || sub === '-h' || sub === 'help') {
+  process.stderr.write(USAGE);
+  process.exit(sub ? 0 : 1);
+}
+
+// 位置参数形式 `dl <projectPath> graph stats` 也要能走到查询脚本
+const script = ROUTES[sub]
+  ? ROUTES[sub]
+  : (QUERY_DOMAINS.has(sub) || rest.some(arg => QUERY_DOMAINS.has(arg)))
+    ? QUERY
+    : null;
+
+if (!script) {
+  process.stdout.write(
+    JSON.stringify({ ok: false, error: `未知子命令：${sub}（import | graph | scope | embed | serve | skill）` }, null, 2) + '\n',
+  );
+  process.stderr.write('\n' + USAGE);
+  process.exit(1);
+}
+
+// ROUTES 的子命令名本身不是脚本参数，查询域的要原样传下去
+const args = ROUTES[sub] ? rest : [sub, ...rest];
+
+const child = spawn(process.execPath, [path.join(REPO, script), ...args], { stdio: 'inherit' });
+child.on('exit', (code, signal) => {
+  if (signal) process.kill(process.pid, signal);
+  else process.exit(code ?? 0);
+});
