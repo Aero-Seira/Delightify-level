@@ -35,7 +35,11 @@ pnpm exporter:runClient
 # 进档后：/dl_export dump
 # 快照：<实例>/dl-exporter/export.sqlite
 
-# 查询（须已导入快照）
+# 摄入快照 → project.db（其余一切的前置）
+node scripts/agent-query.mjs <实例路径> import detect
+node scripts/agent-query.mjs <实例路径> import run
+
+# 查询（实例路径可省略：设 DL_PROJECT，或在实例目录下执行）
 node scripts/agent-query.mjs <实例路径> graph stats
 node scripts/agent-query.mjs <实例路径> graph usages minecraft:copper_ingot
 node scripts/agent-query.mjs <实例路径> embed search "铜锭" --top 10
@@ -45,8 +49,6 @@ node scripts/agent-query.mjs <实例路径> scope create copper minecraft:copper
 node scripts/present-serve.mjs <实例路径> --scope copper
 # 同一进程打开 /b 即图鉴
 ```
-
-摄入快照目前走 `@delightify/core` 的 `importModData`，尚未接到 `agent-query`。
 
 ## 文档
 

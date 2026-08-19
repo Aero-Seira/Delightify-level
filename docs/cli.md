@@ -3,10 +3,25 @@
 工作方式见 [`using.md`](./using.md)。本文只列 `agent-query` 的参数。
 
 ```bash
-node scripts/agent-query.mjs [<projectPath>] <graph|embed|scope> <命令> [参数]
+node scripts/agent-query.mjs [<projectPath>] <import|graph|embed|scope> <命令> [参数]
 ```
 
-`<projectPath>` 可省略：`--project <path>`、环境变量 `DL_PROJECT`、或从 cwd 上溯 `.delightify-level/project.db`。stdout 仅 JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。id 不存在时另有 `did_you_mean`（候选 id 列表，带 `score` / `reason`）。
+`<projectPath>` 可省略：`--project <path>`、环境变量 `DL_PROJECT`、或从 cwd 上溯 `.delightify-level/project.db`（`import` 还认快照 `dl-exporter/export.sqlite`，那时库还没建出来）。stdout 仅 JSON：`{ "ok": true, "data": ... }` 或 `{ "ok": false, "error": "..." }`。id 不存在时另有 `did_you_mean`（候选 id 列表，带 `score` / `reason`）。
+
+## import
+
+把 exporter 的快照摄入 `project.db`。**其余所有域的前置**。
+
+```
+detect [--file <快照路径>]
+run    [--file <快照路径>]
+```
+
+`detect` 只看不写：报快照在哪、`sourceKind`、`schema_version`、`capabilities` 与四类计数，`imported` 说明项目库是否已存在。`run` 执行导入，**并一并物化图谱**，不必再跑 `graph rebuild`；重复跑是幂等的（先清事实表再写）。
+
+不给 `--file` 就按下列相对路径依次找：`dl-exporter/export.sqlite`、`.dl-exporter/export.sqlite`、`delightify-level-exporter/export.sqlite`、`.delightify-level-exporter/export.sqlite`，以及四条 legacy 路径。
+
+大包导入是分钟级，进度写 stderr（`[45%] 导入配方...`）。core 内部的日志同样只走 stderr——stdout 永远只有那一个 JSON。
 
 ## graph
 

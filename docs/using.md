@@ -18,7 +18,7 @@ Delightify-level 提供整合包的**运行时最终态**（游戏加载完之�
 | `<projectPath>/.delightify-level/project.db` | 已导入的世界库。没有它，查询会失败 |
 
 没有快照：告诉作者把 exporter 放进 `mods/`，进档执行 `/dl_export dump`。
-有快照、无 `project.db`：导入尚未接到 CLI，用 `@delightify/core` 的 `importModData({ projectPath })`（先 `pnpm build`）。不要手写插入事实表。
+有快照、无 `project.db`：跑 `import run`（先 `pnpm build`）。导入会一并物化图谱，不必再 `graph rebuild`。不要手写插入事实表。
 
 查询前在本仓根执行过 `pnpm build`。
 
@@ -114,7 +114,6 @@ node scripts/agent-query.mjs <p> embed similar <itemId> [--top n]
 
 | 函数 | 用途 |
 |---|---|
-| `importModData({ projectPath })` | 检测并导入 `export.sqlite`，建图谱 |
 | `queryUnifyCandidates` / `dryRunUnify` | 同名物品候选与合并预览 |
 | `planEngineBlast` | 物品/tag 的配方影响面 |
 | `planEngineAction` | `replace` / `retag` / `remove` / `rename` / `scale` / `hide` / `constrain_inputs` / `differentiate` / `harmonize` 的 dry-run |

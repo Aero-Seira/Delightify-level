@@ -21,8 +21,10 @@ export {
 } from './suggest';
 
 export {
+  PROJECT_DB_MARKER,
   ProjectNotFoundError,
   findProjectFromCwd,
+  hasMarker,
   isProjectRoot,
   projectDbPath,
   resolveProject,

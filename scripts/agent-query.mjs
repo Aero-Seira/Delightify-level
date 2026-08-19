@@ -6,7 +6,11 @@
  * 游戏事实图谱与物品向量，stdout 输出 JSON：{ ok, data?, error? }，
  * 退出码非 0 即失败。使用前需 pnpm build。
  *
+ * import 域把 exporter 的快照摄入项目库，是其余所有域的前置。
+ *
  * 用法（<projectPath> 可省略：读 DL_PROJECT，或从 cwd 上溯 .delightify-level/）：
+ *   node scripts/agent-query.mjs [<projectPath>] import detect [--file <快照路径>]
+ *   node scripts/agent-query.mjs [<projectPath>] import run [--file <快照路径>]
  *   node scripts/agent-query.mjs [<projectPath>] graph stats
  *   node scripts/agent-query.mjs --project <projectPath> graph stats
  *   node scripts/agent-query.mjs graph usages <itemId> [--limit n]
@@ -34,6 +38,8 @@
  * 文档：docs/using.md（工作方式）、docs/cli.md（参数表）
  */
 import { createClient } from '@libsql/client';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { rebuildGraph } from '../packages/core/dist/graph/build.js';
 import { graphStats, itemUsages, graphNeighbors, graphPath } from '../packages/core/dist/graph/query.js';
 import { closureFrom } from '../packages/core/dist/graph/closure.js';
@@ -48,10 +54,36 @@ import {
   reviewScope,
   showScope,
 } from '../packages/core/dist/scope/index.js';
-import { IdNotFoundError, requireId, resolveProject } from '../packages/core/dist/lookup/index.js';
+import {
+  IdNotFoundError,
+  PROJECT_DB_MARKER,
+  requireId,
+  resolveProject,
+} from '../packages/core/dist/lookup/index.js';
+import {
+  DATA_FILE_PATHS,
+  detectModDataFile,
+  importModData,
+  validateModDataFile,
+} from '../packages/core/dist/mod-data-importer/index.js';
 
 const NODE_PREFIXES = ['item:', 'tag:', 'recipe:', 'loot:'];
-const DOMAINS = new Set(['graph', 'embed', 'scope']);
+const DOMAINS = new Set(['graph', 'embed', 'scope', 'import']);
+
+/**
+ * 不变量 4.3：stdout 只有一个 JSON。
+ *
+ * core 的 importer 与 SchemaManager 有七十多处 console.log，直接写 stdout 会把
+ * 调用方要解析的那个 JSON 冲掉。壳持有 stdout 契约，所以在壳里统一改道 stderr。
+ * 根治要清掉 core 里的 console，见 AGENT.md §6。
+ */
+for (const level of ['log', 'info', 'debug', 'warn', 'error']) {
+  console[level] = (...args) => {
+    process.stderr.write(
+      args.map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ') + '\n',
+    );
+  };
+}
 
 function ok(data) {
   process.stdout.write(JSON.stringify({ ok: true, data }, null, 2) + '\n');
@@ -123,17 +155,98 @@ function splitInvocation(positional, flags) {
       cmdArgs: positional.slice(3),
     };
   }
-  fail('参数不足：[projectPath] <graph|embed|scope> <command>（或设 DL_PROJECT / 在项目目录下执行）', true);
+  fail('参数不足：[projectPath] <graph|embed|scope|import> <command>（或设 DL_PROJECT / 在项目目录下执行）', true);
+}
+
+/**
+ * import 域：把快照摄入 project.db。
+ *
+ * 与其它域不同，run 之前项目库可能还不存在，所以自管连接；importModData 内部
+ * 已经 deriveGraph + writeGraph，不需要再 graph rebuild。
+ */
+async function runImport(project, command, flags) {
+  if (command === 'detect') {
+    const dataFilePath = flags.file
+      ? path.resolve(project.projectPath, flags.file)
+      : await detectModDataFile(project.projectPath);
+    if (!dataFilePath) {
+      fail(
+        `未找到快照。在 ${project.projectPath} 下找过：${DATA_FILE_PATHS.join('、')}。` +
+        '请确认已装 exporter 并在游戏里跑过 /dl_export dump。',
+      );
+    }
+    const validation = await validateModDataFile(dataFilePath);
+    ok({
+      projectPath: project.projectPath,
+      dataFilePath,
+      dbPath: project.dbPath,
+      imported: fs.existsSync(project.dbPath),
+      valid: validation.valid,
+      error: validation.error ?? null,
+      sourceKind: validation.sourceKind ?? null,
+      schemaVersion: validation.schemaVersion ?? null,
+      capabilities: validation.capabilities ?? null,
+      exportedAt: validation.exportedAt ?? null,
+      minecraftVersion: validation.minecraftVersion ?? null,
+      modlistHash: validation.modlistHash ?? null,
+      counts: {
+        mod: validation.modCount ?? null,
+        item: validation.itemCount ?? null,
+        recipe: validation.recipeCount ?? null,
+        tag: validation.tagCount ?? null,
+      },
+    });
+    return;
+  }
+
+  if (command !== 'run') {
+    fail(`未知 import 子命令：${command}（detect | run）`, true);
+  }
+
+  // 进度只走 stderr（不变量 4.3）。大包导入是分钟级，没有进度会以为卡死。
+  let lastPhase = '';
+  const result = await importModData({
+    projectPath: project.projectPath,
+    dataFilePath: flags.file ? path.resolve(project.projectPath, flags.file) : undefined,
+    onProgress: progress => {
+      if (progress.phase === lastPhase && progress.phase === 'importing') return;
+      lastPhase = progress.phase;
+      process.stderr.write(`[${progress.percent}%] ${progress.message}\n`);
+    },
+  });
+
+  // importModData 不抛异常，失败是返回值
+  if (!result.success) {
+    fail(result.error || '导入失败');
+  }
+
+  ok({
+    projectPath: project.projectPath,
+    dbPath: project.dbPath,
+    importId: result.importId ?? null,
+    sourceKind: result.sourceKind ?? null,
+    capabilities: result.capabilities ?? null,
+    stats: result.stats ?? null,
+  });
 }
 
 async function main() {
   const parsed = parseFlags(process.argv.slice(2));
   const { explicit, domain, command, cmdArgs } = splitInvocation(parsed.positional, parsed.flags);
-  if (!domain || !command) fail('参数不足：[projectPath] <graph|embed|scope> <command>', true);
+  if (!domain || !command) fail('参数不足：[projectPath] <graph|embed|scope|import> <command>', true);
 
   let project;
   try {
-    project = resolveProject({ explicit, cwd: process.cwd(), env: process.env });
+    // import 时项目库还没建出来，按快照认实例根
+    project = domain === 'import'
+      ? resolveProject({
+          explicit,
+          cwd: process.cwd(),
+          env: process.env,
+          markers: [...DATA_FILE_PATHS, PROJECT_DB_MARKER],
+          requireMarker: false,
+        })
+      : resolveProject({ explicit, cwd: process.cwd(), env: process.env });
   } catch (error) {
     failCaught(error, true);
   }
@@ -144,6 +257,12 @@ async function main() {
 
   const flags = parsed.flags;
   const positional = cmdArgs;
+
+  // import 自管连接：run 之前项目库可能还不存在
+  if (domain === 'import') {
+    await runImport(project, command, flags);
+    return;
+  }
 
   // graph rebuild 自管连接
   if (domain === 'graph' && command === 'rebuild') {
@@ -256,7 +375,7 @@ async function main() {
         fail(`未知 scope 子命令：${command}`, true);
       }
     } else {
-      fail(`未知域：${domain}（graph | embed | scope）`, true);
+      fail(`未知域：${domain}（graph | embed | scope | import）`, true);
     }
   } finally {
     db.close();

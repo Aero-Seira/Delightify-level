@@ -40,7 +40,7 @@ pnpm typecheck      # 唯一的自动化校验手段
 | `packages/core/src/export/` | `kubejs-emitter.ts` 生成受管脚本；写盘、撤销 |
 | `packages/core/src/llm/` | provider 抽象（openai / ollama / anthropic），目前只被 embedding 用 |
 | `packages/shared/src/types/` | 跨包类型 |
-| `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`graph` / `embed` / `scope` |
+| `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`import` / `graph` / `embed` / `scope` |
 
 `packages/core/src/index.ts` 把所有子模块 `export *`。新增子模块记得挂上去。
 
@@ -81,6 +81,7 @@ pnpm typecheck      # 唯一的自动化校验手段
 | 位置 | 问题 |
 |---|---|
 | `graph/query.ts` `itemUsages` | ~~无结果上限~~ 已加 `limit`（默认 200）与 `truncated` |
+| `mod-data-importer/importer.ts`、`database/schema-manager.ts` | 七十多处 `console.log` 直写 stdout，会冲掉 4.3 要求的那个 JSON。**目前靠 `agent-query.mjs` 把 console 整体改道 stderr 兜住**，是壳在替 core 擦屁股。根治要把 core 的日志换成注入的 logger 或直接删掉 |
 | `embedding/search.ts` | 检索时 `SELECT item_id, vector, source_text FROM item_embeddings` **全量载入内存**再算相似度。数万物品规模下需要改增量或近似检索 |
 | `database/schema-manager.ts` | 仍带 IDE 时代的遗留表：`plans` / `plan_snapshots` / `agent_runs` / `intent_specs` / `gate_reviews` / `guided_sessions` / `detect_reports`。按 4.7 它们不属于本项目，应清理 |
 | `agent-query.mjs` | 硬编码 `../packages/core/dist/*` 相对路径，要求使用者 clone 并构建本仓。应改为发布 `dl` bin |
@@ -95,7 +96,11 @@ pnpm typecheck      # 唯一的自动化校验手段
 
 **浏览层已有第一刀**（`/b` 图鉴 + 选取导出 + 降级画布，见 [`docs/plans/browse-layer.md`](docs/plans/browse-layer.md)）。JEI `recipe_views` 采集、把选取喂给 `scope create` 以外的动作都还没做。
 
-**响应契约补全已有第一刀**（`did_you_mean`、项目发现、`graph usages` 上限）。下一步仍是路线图第 4 项 `dl index` / `dl map`，或问作者要不要先做自然语言建 scope / JEI 采集。
+**响应契约补全已有第一刀**（`did_you_mean`、项目发现、`graph usages` 上限）。
+
+**摄入已接进 CLI**（`import detect` / `import run`），至此 exporter 快照 → `project.db` → 检索 / 图鉴是一条完整的链，不再需要使用者自己写脚本调 `importModData`。
+
+下一步是路线图第 4 项 `dl index` / `dl map`，或问作者要不要先做自然语言建 scope / JEI 采集。
 
 不确定优先级时问作者，不要自行扩大范围。
 
