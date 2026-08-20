@@ -15,9 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 不写 version：package.json 已有 packageManager: pnpm@9.0.0，
+      # 两处都指定会让 action 报 "Multiple versions of pnpm specified" 直接失败
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
