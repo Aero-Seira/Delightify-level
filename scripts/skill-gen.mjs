@@ -28,11 +28,14 @@ import {
   HARNESSES,
   LINK_REWRITES,
   REFERENCE_DOCS,
+  SINGLE_FILE_REWRITES,
   SKILL_NAME,
 } from '../packages/skill/config.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = 'docs/using.md';
+/** SKILL.md 激活后常驻上下文，给它一个明确的预算 */
+const MAX_ENTRY_BYTES = 24 * 1024;
 
 function ok(data) {
   process.stdout.write(JSON.stringify({ ok: true, data }, null, 2) + '\n');
@@ -80,7 +83,7 @@ function repoVersion() {
  * 仓库根目录才成立的写法。skill 装到 ~/.claude/skills/ 之后 cwd 是作者的整合包
  * 实例，必须换成能在任意 cwd 下执行的形式。
  */
-function rewrite(text, command) {
+function rewrite(text, command, layout) {
   let out = text;
 
   for (const pattern of DROP_BLOCKS) {
@@ -94,6 +97,11 @@ function rewrite(text, command) {
   for (const [pattern, replacement] of LINK_REWRITES) {
     out = out.replace(pattern, replacement);
   }
+  if (layout === 'single-file') {
+    for (const [pattern, replacement] of SINGLE_FILE_REWRITES) {
+      out = out.replace(pattern, replacement);
+    }
+  }
 
   // 「先 pnpm build」是本仓开发者的步骤，装好的 skill 不该再提
   out = out.replace(/（先 `pnpm build`）/g, '');
@@ -102,11 +110,11 @@ function rewrite(text, command) {
   return out.replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
-function buildBody(command) {
+function buildBody(command, layout) {
   const source = fs.readFileSync(path.join(REPO, SOURCE), 'utf8');
   // 去掉源文档的 H1，wrap 会各自加自己的标题
   const withoutTitle = source.replace(/^#\s+.*\n/, '');
-  return rewrite(withoutTitle, command);
+  return rewrite(withoutTitle, command, layout);
 }
 
 function resolveCommand(raw) {
@@ -122,7 +130,7 @@ function resolveCommand(raw) {
 function collectFiles(target, command, version) {
   const harness = HARNESSES[target];
   const ctx = { version, sourceRepo: REPO, command };
-  const body = buildBody(command);
+  const body = buildBody(command, harness.layout);
   const files = new Map();
 
   files.set(harness.entry, harness.wrap(body, ctx));
@@ -130,7 +138,7 @@ function collectFiles(target, command, version) {
   if (harness.layout === 'directory') {
     for (const doc of REFERENCE_DOCS) {
       const text = fs.readFileSync(path.join(REPO, doc.source), 'utf8');
-      files.set(doc.target, rewrite(text, command));
+      files.set(doc.target, rewrite(text, command, harness.layout));
     }
     files.set(
       'reference/README.md',
@@ -141,6 +149,62 @@ function collectFiles(target, command, version) {
   }
 
   return files;
+}
+
+/**
+ * 产物可用性断言。
+ *
+ * CI 里 build/ 是 gitignore 的，全新检出没有产物可比，字节比对无从谈起——
+ * 也没必要：产物不入库，就不存在「committed 产物过期」这种漂移。真正要守的是
+ * **生成出来的东西装进 agent 后能不能用**，所以断言的是改写有没有做干净。
+ * 这些每一条都对应一种装完才会发现的静默故障。
+ */
+function assertUsable(target, files) {
+  const harness = HARNESSES[target];
+  const entry = files.get(harness.entry);
+  const problems = [];
+
+  if (!entry) return [`没有生成入口文件 ${harness.entry}`];
+
+  if (target === 'claude') {
+    const fm = entry.match(/^---\n([\s\S]*?)\n---\n/);
+    if (!fm) problems.push('SKILL.md 缺 frontmatter，harness 不会识别成 skill');
+    else {
+      const front = fm[1];
+      if (!new RegExp(`^name:\\s*${SKILL_NAME}\\s*$`, 'm').test(front)) {
+        problems.push(`frontmatter 的 name 不是 ${SKILL_NAME}`);
+      }
+      // description 决定 agent 想不想得起来用它，空的等于没装
+      const desc = front.match(/^description:\s*(.+)$/m);
+      if (!desc) problems.push('frontmatter 缺 description');
+      else if (desc[1].replace(/^"|"$/g, '').trim().length < 40) {
+        problems.push('description 过短，起不到触发作用');
+      }
+    }
+  }
+
+  for (const [rel, content] of files) {
+    // 改写漏一条，装完就是死链或跑不通的命令
+    const deadLinks = content.match(/\]\(\.\/[\w.-]+\.md\)/g);
+    if (deadLinks) problems.push(`${rel} 残留仓库相对链接：${[...new Set(deadLinks)].join(' ')}`);
+    if (/node scripts\//.test(content)) problems.push(`${rel} 残留 node scripts/ 调用，装到别处跑不通`);
+    if (/pnpm build/.test(content)) problems.push(`${rel} 残留 pnpm build，那是本仓开发者的步骤`);
+    if (/AGENT\.md/.test(content)) problems.push(`${rel} 残留指向本仓 AGENT.md 的引用`);
+  }
+
+  // SKILL.md 里引到的 reference 必须真的打包进去了，否则是静默的断链
+  for (const ref of entry.match(/\]\((reference\/[\w.-]+\.md)\)/g) || []) {
+    const target = ref.match(/\]\((.+)\)/)[1];
+    if (!files.has(target)) problems.push(`SKILL.md 引用了未打包的 ${target}`);
+  }
+
+  // SKILL.md 激活后常驻上下文，超了要么拆 reference 要么精简
+  const entryBytes = Buffer.byteLength(entry);
+  if (entryBytes > MAX_ENTRY_BYTES) {
+    problems.push(`${harness.entry} ${entryBytes} 字节，超过 ${MAX_ENTRY_BYTES} 的上下文预算`);
+  }
+
+  return problems;
 }
 
 function main() {
@@ -162,16 +226,23 @@ function main() {
   }
 
   if (flags.check) {
-    const drift = [];
-    for (const [rel, content] of files) {
-      const full = path.join(outDir, rel);
-      if (!fs.existsSync(full)) drift.push(`缺失：${rel}`);
-      else if (fs.readFileSync(full, 'utf8') !== content) drift.push(`已漂移：${rel}`);
+    const problems = assertUsable(target, files);
+
+    // 产物目录存在才比对（例如校验已安装的那份是不是过期了）。
+    // 目录压根不存在 = 没装过，没有可过期的东西，不算失败。
+    const installed = fs.existsSync(outDir);
+    if (installed) {
+      for (const [rel, content] of files) {
+        const full = path.join(outDir, rel);
+        if (!fs.existsSync(full)) problems.push(`${rel} 缺失（产物不完整）`);
+        else if (fs.readFileSync(full, 'utf8') !== content) {
+          problems.push(`${rel} 与 ${SOURCE} 不一致，重新跑 skill-gen`);
+        }
+      }
     }
-    if (drift.length > 0) {
-      fail(`产物与 ${SOURCE} 不一致：${drift.join('；')}。重新跑 skill-gen。`);
-    }
-    ok({ target, out: outDir, checked: files.size, drift: 0 });
+
+    if (problems.length > 0) fail(problems.join('；'));
+    ok({ target, out: outDir, checked: files.size, comparedOnDisk: installed, problems: 0 });
     return;
   }
 

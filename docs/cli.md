@@ -117,6 +117,6 @@ dl skill [--target claude|agents] [--out <dir>] [--command <前缀>] [--install]
 | `--target agents` | 单文件 `AGENTS.md`，给读单文件的 harness |
 | `--install` | 装到该 harness 的默认位置。claude 是 `~/.claude/skills/delightify-level/` |
 | `--command` | 调用前缀。默认钉死本仓 `bin/dl` 的绝对路径；发到 npm 后传 `--command dl` |
-| `--check` | 只校验产物与源文档是否一致，不写盘。**不一致时退出码非 0**，可挂 CI |
+| `--check` | 断言产物可用性：frontmatter、死链、残留的 `node scripts/` 与 `pnpm build`、引用的 reference 是否真打包、`SKILL.md` 是否超 24 KB 上下文预算。产物目录存在时**另外**比对是否与源文档一致（用来查已安装的那份过期没）。**有问题退出码非 0**，已挂 CI |
 
 生成时会把仓库相对链接改写成 skill 内的相对路径，并去掉「先 `pnpm build`」这类只对本仓开发者成立的话。

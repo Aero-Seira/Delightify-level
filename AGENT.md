@@ -88,7 +88,7 @@ pnpm typecheck      # 唯一的自动化校验手段
 | `database/schema-manager.ts` | 仍带 IDE 时代的遗留表：`plans` / `plan_snapshots` / `agent_runs` / `intent_specs` / `gate_reviews` / `guided_sessions` / `detect_reports`。按 4.7 它们不属于本项目，应清理 |
 | `agent-query.mjs` | 硬编码 `../packages/core/dist/*` 相对路径，要求使用者 clone 并构建本仓。应改为发布 `dl` bin |
 | `agent-query.mjs` | ~~`projectPath` 强制位置参数~~ 已支持省略：`--project` / `DL_PROJECT` / cwd 上溯 |
-| 全局 | 无测试框架 |
+| 全局 | 无测试框架。CI（`.github/workflows/ci.yml`）只跑 typecheck + build + 脚本可解析 + skill 可用性，**没有端到端冒烟**：快照 → 导入 → 查询这条链全靠手动验 |
 
 ## 7. 现在该做什么
 

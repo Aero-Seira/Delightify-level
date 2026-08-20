@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: typecheck + skill
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # AGENT.md §2：本仓没有测试框架，typecheck 是唯一的自动化校验手段
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # agent-query / present-serve 直接 import dist/，构建不出来就等于 CLI 是坏的
+      - name: Build
+        run: pnpm build
+
+      # CLI 是给外部 agent 的入口，语法错了整条链都不通
+      - name: 脚本可解析
+        run: |
+          for f in bin/dl scripts/*.mjs; do
+            node --check "$f" || exit 1
+          done
+
+      # design.md §7：指令文档单一来源。产物不入库，所以这里守的不是「产物过期」，
+      # 而是「生成出来的 skill 装进 agent 后能不能用」——死链、跑不通的命令、
+      # 缺 frontmatter、超上下文预算，都是装完才会发现的静默故障。
+      - name: skill 可用性
+        run: |
+          node scripts/skill-gen.mjs --check --target claude
+          node scripts/skill-gen.mjs --check --target agents

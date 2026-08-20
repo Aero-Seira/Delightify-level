@@ -20,17 +20,38 @@ export const REFERENCE_DOCS = [
 
 /**
  * 仓库内的相对链接 → 已安装 skill 里的相对路径。
- * 漏改一条就是安装后点不开的死链。
+ * 漏改一条就是安装后点不开的死链，`--check` 会拦。
+ *
+ * 分三类：打包进去的（改成 skill 内路径）、变成入口的（using.md 就是 SKILL.md）、
+ * 没打包的（`design.md` 是本仓设计决策，使用者用不着，去掉链接只留文字）。
  */
 export const LINK_REWRITES = [
   [/\[`world\.md`\]\(\.\/world\.md\)/g, '[`reference/world.md`](reference/world.md)'],
   [/\[`contract\.md`\]\(\.\/contract\.md\)/g, '[`reference/contract.md`](reference/contract.md)'],
   [/\[`cli\.md`\]\(\.\/cli\.md\)/g, '[`reference/cli.md`](reference/cli.md)'],
+  // reference/ 内部回指入口，要多退一级
+  [/\[`using\.md`\]\(\.\/using\.md\)/g, '[`SKILL.md`](../SKILL.md)'],
+  // 未打包的文档：留文字去链接
+  [/\[`design\.md`\]\(\.\/design\.md\)/g, '`design.md`（本仓文档，未随 skill 打包）'],
+];
+
+/**
+ * 单文件 harness 的补充改写。
+ *
+ * AGENTS.md 没有 reference/ 目录可放东西，公共改写产出的 `reference/x.md` 链接
+ * 在那里是死链。全部内联又会让一份常驻上下文的文件涨到 20 KB 以上，所以去链接、
+ * 指回仓库里的原文档。
+ */
+export const SINGLE_FILE_REWRITES = [
+  [/\[`reference\/([\w.-]+\.md)`\]\(reference\/[\w.-]+\.md\)/g, '`docs/$1`（在 Delightify-level 仓库里）'],
+  [/\[`SKILL\.md`\]\(\.\.\/SKILL\.md\)/g, '本文'],
 ];
 
 /** 只对本仓开发者有意义、装到别人机器上纯噪音的段落 */
 export const DROP_BLOCKS = [
   /^> 要改本仓库的代码.*$/m,
+  // cli.md 讲 skill-gen 自身的那一节，是给本仓开发者的
+  /\n## skill\n[\s\S]*?(?=\n## |$)/,
 ];
 
 export const SKILL_NAME = 'delightify-level';
