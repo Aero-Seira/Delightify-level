@@ -21,6 +21,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROUTES = {
   serve: 'scripts/present-serve.mjs',
   skill: 'scripts/skill-gen.mjs',
+  diagnose: 'scripts/diagnose-recipes.mjs',
 };
 const QUERY = 'scripts/agent-query.mjs';
 const QUERY_DOMAINS = new Set(['import', 'graph', 'embed', 'scope']);
@@ -33,6 +34,7 @@ const USAGE = `dl —— Delightify-level 统一入口
   dl embed  build|search|similar
   dl serve  [--port 7450] [--scope <name>]  本地 web：/ 审 scope、/b 图鉴
   dl skill  [--target claude|agents] [--install]
+  dl diagnose [--log <latest.log>]          配方为空时采证，见 docs/plans/recipe-unparsed-triage.md
 
 <projectPath> 可省略：--project <path>、DL_PROJECT，或在实例目录下执行。
 参数表见 docs/cli.md。

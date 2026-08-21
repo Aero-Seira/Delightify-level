@@ -40,7 +40,8 @@ pnpm typecheck      # 唯一的自动化校验手段
 | `packages/core/src/export/` | `kubejs-emitter.ts` 生成受管脚本；写盘、撤销 |
 | `packages/core/src/llm/` | provider 抽象（openai / ollama / anthropic），目前只被 embedding 用 |
 | `packages/shared/src/types/` | 跨包类型 |
-| `bin/dl` | 统一入口。`dl <域>` → agent-query，`dl serve` → present-serve，`dl skill` → skill-gen |
+| `bin/dl` | 统一入口。`dl <域>` → agent-query，`dl serve` → present-serve，`dl skill` → skill-gen，`dl diagnose` → diagnose-recipes |
+| `scripts/lib/stdout-guard.mjs` | 把 core 的 console 改道 stderr。**每个 CLI 脚本必须最先 import 它**（不变量 4.3） |
 | `scripts/agent-query.mjs` | 外部 agent 的 JSON 入口，`import` / `graph` / `embed` / `scope` |
 | `scripts/skill-gen.mjs` + `packages/skill/config.mjs` | 从 `docs/using.md` 生成 SKILL.md / AGENTS.md。**改指令要改源文档再重生成，不要改产物** |
 
@@ -103,6 +104,10 @@ pnpm typecheck      # 唯一的自动化校验手段
 **摄入已接进 CLI**（`import detect` / `import run`），至此 exporter 快照 → `project.db` → 检索 / 图鉴是一条完整的链，不再需要使用者自己写脚本调 `importModData`。
 
 下一步是路线图第 4 项 `dl index` / `dl map`，或问作者要不要先做自然语言建 scope / JEI 采集。
+
+**当前阻塞项**：实机验证发现配方结构化槽位大面积缺失，agent 因此误判为「坏配方」。
+交接与排查步骤见 [`docs/plans/recipe-unparsed-triage.md`](docs/plans/recipe-unparsed-triage.md)，
+入口是 `dl diagnose`。**这件事优先于路线图上的任何一项。**
 
 不确定优先级时问作者，不要自行扩大范围。
 

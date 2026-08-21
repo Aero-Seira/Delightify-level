@@ -120,3 +120,13 @@ dl skill [--target claude|agents] [--out <dir>] [--command <前缀>] [--install]
 | `--check` | 断言产物可用性：frontmatter、死链、残留的 `node scripts/` 与 `pnpm build`、引用的 reference 是否真打包、`SKILL.md` 是否超 24 KB 上下文预算。产物目录存在时**另外**比对是否与源文档一致（用来查已安装的那份过期没）。**有问题退出码非 0**，已挂 CI |
 
 生成时会把仓库相对链接改写成 skill 内的相对路径，并去掉「先 `pnpm build`」这类只对本仓开发者成立的话。
+
+## diagnose
+
+配方结构化槽位缺失时的采证入口。背景与判读见 [`plans/recipe-unparsed-triage.md`](./plans/recipe-unparsed-triage.md)。
+
+```
+dl diagnose [--project <path>] [--file <快照>] [--log <latest.log>] [--samples 5]
+```
+
+同时查快照与项目库并对比：两边一致说明导入没丢东西、问题在采集侧；不一致说明是 importer 的锅。另外扫 `logs/latest.log` 统计 exporter 自己打的 WARN 异常类名。stdout 一个 JSON，可直接贴给协助排查的人。

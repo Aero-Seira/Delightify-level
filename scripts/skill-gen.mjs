@@ -184,18 +184,20 @@ function assertUsable(target, files) {
   }
 
   for (const [rel, content] of files) {
-    // 改写漏一条，装完就是死链或跑不通的命令
-    const deadLinks = content.match(/\]\(\.\/[\w.-]+\.md\)/g);
-    if (deadLinks) problems.push(`${rel} 残留仓库相对链接：${[...new Set(deadLinks)].join(' ')}`);
+    // 死链判定不靠「长得像坏链接」的模式匹配，而是把相对链接解析出来，
+    // 看目标在不在打包清单里。这样 reference/cli.md 回指 ../SKILL.md 这种
+    // 合法的跨级链接不会被误伤，而任何指向未打包文件的链接都跑不掉。
+    for (const match of content.matchAll(/\]\(([^)\s]+\.md)\)/g)) {
+      const href = match[1];
+      if (/^[a-z]+:\/\//i.test(href)) continue;
+      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(rel), href));
+      if (!files.has(resolved)) {
+        problems.push(`${rel} 链接到未打包的 ${href}（解析为 ${resolved}）`);
+      }
+    }
     if (/node scripts\//.test(content)) problems.push(`${rel} 残留 node scripts/ 调用，装到别处跑不通`);
     if (/pnpm build/.test(content)) problems.push(`${rel} 残留 pnpm build，那是本仓开发者的步骤`);
     if (/AGENT\.md/.test(content)) problems.push(`${rel} 残留指向本仓 AGENT.md 的引用`);
-  }
-
-  // SKILL.md 里引到的 reference 必须真的打包进去了，否则是静默的断链
-  for (const ref of entry.match(/\]\((reference\/[\w.-]+\.md)\)/g) || []) {
-    const target = ref.match(/\]\((.+)\)/)[1];
-    if (!files.has(target)) problems.push(`SKILL.md 引用了未打包的 ${target}`);
   }
 
   // SKILL.md 激活后常驻上下文，超了要么拆 reference 要么精简

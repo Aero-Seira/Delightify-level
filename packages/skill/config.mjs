@@ -33,6 +33,7 @@ export const LINK_REWRITES = [
   [/\[`using\.md`\]\(\.\/using\.md\)/g, '[`SKILL.md`](../SKILL.md)'],
   // 未打包的文档：留文字去链接
   [/\[`design\.md`\]\(\.\/design\.md\)/g, '`design.md`（本仓文档，未随 skill 打包）'],
+  [/\[`plans\/([\w.-]+\.md)`\]\(\.\/plans\/[\w.-]+\.md\)/g, '`docs/plans/$1`（本仓文档，未随 skill 打包）'],
 ];
 
 /**

@@ -37,6 +37,8 @@
  *
  * 文档：docs/using.md（工作方式）、docs/cli.md（参数表）
  */
+// 必须最先 import：它改道 console，晚于任何会打日志的调用就来不及了（不变量 4.3）
+import './lib/stdout-guard.mjs';
 import { createClient } from '@libsql/client';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -70,20 +72,6 @@ import {
 const NODE_PREFIXES = ['item:', 'tag:', 'recipe:', 'loot:'];
 const DOMAINS = new Set(['graph', 'embed', 'scope', 'import']);
 
-/**
- * 不变量 4.3：stdout 只有一个 JSON。
- *
- * core 的 importer 与 SchemaManager 有七十多处 console.log，直接写 stdout 会把
- * 调用方要解析的那个 JSON 冲掉。壳持有 stdout 契约，所以在壳里统一改道 stderr。
- * 根治要清掉 core 里的 console，见 AGENT.md §6。
- */
-for (const level of ['log', 'info', 'debug', 'warn', 'error']) {
-  console[level] = (...args) => {
-    process.stderr.write(
-      args.map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ') + '\n',
-    );
-  };
-}
 
 function ok(data) {
   process.stdout.write(JSON.stringify({ ok: true, data }, null, 2) + '\n');
