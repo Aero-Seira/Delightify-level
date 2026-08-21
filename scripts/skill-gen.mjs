@@ -71,6 +71,18 @@ function expandHome(p) {
   return p.startsWith('~') ? path.join(os.homedir(), p.slice(1)) : p;
 }
 
+/**
+ * 读源文档，换行一律归一成 LF。
+ *
+ * 下面所有改写规则（DROP_BLOCKS、`（先 pnpm build）` 等）里的 `\n` 都是字面量，
+ * 遇到 CRLF 会整片失配。Windows 检出默认 `core.autocrlf=true`，工作区就是 CRLF，
+ * 而仓库里存的是 LF——于是同一份文档在 Linux 上生成正常、在 Windows 上残留一整段
+ * 只对本仓开发者成立的内容，且 CI（Linux）永远发现不了。归一化放在唯一的入口。
+ */
+function readDoc(relative) {
+  return fs.readFileSync(path.join(REPO, relative), 'utf8').replace(/\r\n/g, '\n');
+}
+
 function repoVersion() {
   const pkg = JSON.parse(fs.readFileSync(path.join(REPO, 'package.json'), 'utf8'));
   return pkg.version || '0.0.0';
@@ -111,7 +123,7 @@ function rewrite(text, command, layout) {
 }
 
 function buildBody(command, layout) {
-  const source = fs.readFileSync(path.join(REPO, SOURCE), 'utf8');
+  const source = readDoc(SOURCE);
   // 去掉源文档的 H1，wrap 会各自加自己的标题
   const withoutTitle = source.replace(/^#\s+.*\n/, '');
   return rewrite(withoutTitle, command, layout);
@@ -137,7 +149,7 @@ function collectFiles(target, command, version) {
 
   if (harness.layout === 'directory') {
     for (const doc of REFERENCE_DOCS) {
-      const text = fs.readFileSync(path.join(REPO, doc.source), 'utf8');
+      const text = readDoc(doc.source);
       files.set(doc.target, rewrite(text, command, harness.layout));
     }
     files.set(
@@ -195,6 +207,7 @@ function assertUsable(target, files) {
         problems.push(`${rel} 链接到未打包的 ${href}（解析为 ${resolved}）`);
       }
     }
+    if (content.includes('\r')) problems.push(`${rel} 含 CR，改写规则里的 \\n 会失配（源文档要走 readDoc）`);
     if (/node scripts\//.test(content)) problems.push(`${rel} 残留 node scripts/ 调用，装到别处跑不通`);
     if (/pnpm build/.test(content)) problems.push(`${rel} 残留 pnpm build，那是本仓开发者的步骤`);
     if (/AGENT\.md/.test(content)) problems.push(`${rel} 残留指向本仓 AGENT.md 的引用`);
