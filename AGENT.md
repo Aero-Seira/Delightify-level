@@ -105,9 +105,15 @@ pnpm typecheck      # 唯一的自动化校验手段
 
 下一步是路线图第 4 项 `dl index` / `dl map`，或问作者要不要先做自然语言建 scope / JEI 采集。
 
-**当前阻塞项**：实机验证发现配方结构化槽位大面积缺失，agent 因此误判为「坏配方」。
-交接与排查步骤见 [`docs/plans/recipe-unparsed-triage.md`](docs/plans/recipe-unparsed-triage.md)，
-入口是 `dl diagnose`。**这件事优先于路线图上的任何一项。**
+**上一个阻塞项已解除**：配方结构化槽位大面积缺失（实机 33% 配方 `unparsed`，agent 因此误判为
+「坏配方」）。根因是 `isSpecial()` 的语义被用错——它是「别进原版配方书」而非「没有固定配方」，
+模组几乎都覆写成 `true`，据此丢弃产物让整类配方成了只有入边的孤点。exporter 0.2.0 已修并实机
+验证：`unparsed` 3959 → 920，有产出方的物品 5524 → 6886，孤立配方节点 732 → 44，零回退。
+详见 [`docs/plans/recipe-unparsed-triage.md`](docs/plans/recipe-unparsed-triage.md)。
+
+**遗留**：基于旧快照做出的**反向推理结论（「X 由什么产出」「删了还有没有替代路径」）需要重验**，
+正向的（「谁消耗了 X」）不受影响——旧盲区只丢产物不丢输入。剩余 920 条 unparsed 的构成与
+后续采集侧改进（`materials` 形状、嵌套备选原料）见该文档 §6 / §7。
 
 不确定优先级时问作者，不要自行扩大范围。
 

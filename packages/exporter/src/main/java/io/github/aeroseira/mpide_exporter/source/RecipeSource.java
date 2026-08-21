@@ -149,8 +149,17 @@ public final class RecipeSource {
             inputsStructured = addJsonFallbackInputs(ops, recipeId, rawObject, inputs);
         }
 
-        boolean unparsed = rawJson == null || safeIsSpecial(recipe, recipeId) || !inputsStructured;
-        List<RecipeOutputRow> outputs = unparsed ? List.of() : outputRows(registries, recipeId, recipe);
+        // isSpecial() 不参与判定。它的语义是「别进原版配方书」，模组给自己的非工作台配方
+        // 类型几乎都覆写成 true（Create 的 ProcessingRecipe、FD 的 CuttingBoardRecipe 等），
+        // 据此丢弃产物会让整个配方类型在图里变成只有入边的孤点。真正的原版特殊配方无需靠它
+        // 识别：它们的 JSON 里没有任何原料键，兜底会返回 false，照样落到 !inputsStructured。
+        boolean unparsed = rawJson == null || !inputsStructured;
+
+        // 产物与 unparsed 解耦：输入结构化失败不代表产物读不出来，反之亦然。
+        List<RecipeOutputRow> outputs = safeOutputRows(registries, recipeId, recipe);
+        if (outputs.isEmpty() && rawElement instanceof JsonObject outputSource) {
+            outputs = jsonFallbackOutputs(recipeId, outputSource);
+        }
         int[] gridSize = safeGridSize(recipe, recipeId);
 
         RecipeRow row = new RecipeRow(
@@ -293,6 +302,27 @@ public final class RecipeSource {
         return addIngredientRows(recipeId, slot, role, ingredient.get(), rows);
     }
 
+    /**
+     * {@code getResultItem} 现在对每条配方都会调用（不再被 unparsed 挡掉），模组配方类里
+     * 有假定客户端/世界上下文的实现，所以要兜住异常——否则会被外层捕获，整条配方退化成
+     * 连 raw_json 都没有的 unparsed 行。
+     */
+    private static List<RecipeOutputRow> safeOutputRows(
+        HolderLookup.Provider registries,
+        String recipeId,
+        Recipe<?> recipe
+    ) {
+        try {
+            return outputRows(registries, recipeId, recipe);
+        } catch (RuntimeException exception) {
+            LOGGER.warn("Failed to read recipe result for {} ({}: {}); falling back to raw JSON",
+                recipeId,
+                exception.getClass().getSimpleName(),
+                exception.getMessage());
+            return List.of();
+        }
+    }
+
     private static List<RecipeOutputRow> outputRows(HolderLookup.Provider registries, String recipeId, Recipe<?> recipe) {
         if (recipe.getSerializer() == RecipeSerializer.SMITHING_TRIM) {
             return List.of();
@@ -312,6 +342,87 @@ public final class RecipeSource {
             encodeComponentsPatch(registries, result.getComponentsPatch(), recipeId),
             true
         ));
+    }
+
+    /**
+     * 产物兜底。多数模组配方类型不实现原版那套单产物接口（产物在自己的字段里，或本就是多产
+     * 物），{@code getResultItem} 因此返回空，但 raw_json 里是全的。按 result / results /
+     * output 三个常见键把物品捞回来。
+     */
+    private static List<RecipeOutputRow> jsonFallbackOutputs(String recipeId, JsonObject raw) {
+        JsonElement node = raw.has("result") ? raw.get("result")
+            : raw.has("results") ? raw.get("results")
+            : raw.get("output");
+        if (node == null || node.isJsonNull()) {
+            return List.of();
+        }
+
+        List<RecipeOutputRow> rows = new ArrayList<>();
+        if (node instanceof JsonArray array) {
+            int slot = 0;
+            for (JsonElement child : array) {
+                if (addJsonOutputRow(recipeId, slot, child, rows)) {
+                    slot++;
+                }
+            }
+        } else {
+            addJsonOutputRow(recipeId, 0, node, rows);
+        }
+        return List.copyOf(rows);
+    }
+
+    /**
+     * 单条产物，写成功返回 true。流体产物与认不出的形状直接跳过——输入那侧会写 {@code custom}
+     * 占位是因为「有这么一个原料槽但读不出」本身是信息，产物没有对应的语义。
+     */
+    private static boolean addJsonOutputRow(String recipeId, int slot, JsonElement json, List<RecipeOutputRow> rows) {
+        if (json == null || json.isJsonNull()) {
+            return false;
+        }
+        if (json.isJsonPrimitive()) {
+            return addOutputRow(recipeId, slot, json.getAsString(), 1, null, rows);
+        }
+        if (!(json instanceof JsonObject object) || isFluidIngredientJson(object)) {
+            return false;
+        }
+        // farmersdelight:cutting 形如 {"item":{"count":2,"id":"..."}}：真正的产物嵌在 item 下
+        if (object.get("item") instanceof JsonObject nested) {
+            return addJsonOutputRow(recipeId, slot, nested, rows);
+        }
+
+        String itemId = stringProperty(object, "id");
+        if (itemId == null) {
+            itemId = stringProperty(object, "item");
+        }
+        JsonElement count = object.get("count");
+        JsonElement components = object.get("components");
+        return addOutputRow(
+            recipeId,
+            slot,
+            itemId,
+            count != null && count.isJsonPrimitive() ? count.getAsInt() : 1,
+            components == null || components.isJsonNull() ? null : canonicalJson(components),
+            rows);
+    }
+
+    /** 只写注册表里真实存在的物品：包内有引用未安装模组的坏配方，写进去就是凭空多出的图节点。 */
+    private static boolean addOutputRow(
+        String recipeId,
+        int slot,
+        String itemId,
+        int count,
+        String componentsJson,
+        List<RecipeOutputRow> rows
+    ) {
+        if (itemId == null) {
+            return false;
+        }
+        ResourceLocation location = ResourceLocation.tryParse(itemId);
+        if (location == null || !BuiltInRegistries.ITEM.containsKey(location)) {
+            return false;
+        }
+        rows.add(new RecipeOutputRow(recipeId, slot, itemId, Math.max(1, count), componentsJson, slot == 0));
+        return true;
     }
 
     private static Optional<JsonElement> encodeRecipe(RegistryOps<JsonElement> ops, Recipe<?> recipe, String recipeId) {
@@ -356,18 +467,6 @@ public final class RecipeSource {
                 exception.getClass().getSimpleName(),
                 exception.getMessage());
             return "unknown";
-        }
-    }
-
-    private static boolean safeIsSpecial(Recipe<?> recipe, String recipeId) {
-        try {
-            return recipe.isSpecial();
-        } catch (RuntimeException exception) {
-            LOGGER.warn("Failed to read recipe special flag for {} ({}: {}); marking recipe unparsed",
-                recipeId,
-                exception.getClass().getSimpleName(),
-                exception.getMessage());
-            return true;
         }
     }
 

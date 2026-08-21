@@ -50,7 +50,7 @@ public final class ExporterService {
 
     private static final String OUTPUT_DIR = "dl-exporter";
     private static final String OUTPUT_FILE = "export.sqlite";
-    private static final String EXPORTER_VERSION = "0.1.0";
+    private static final String EXPORTER_VERSION = "0.2.0";
 
     private final AtomicBoolean running = new AtomicBoolean(false);
 

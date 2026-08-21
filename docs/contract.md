@@ -90,7 +90,9 @@ recipe_outputs(
 )
 ```
 
-- `unparsed = 1` 时只有 `recipes` 行和 `raw_json`，没有结构化槽位。
+- `unparsed = 1` 表示**导出器没能把输入结构化**，不是配方本身有问题——游戏内通常照常可用。两个触发条件：`raw_json` 编码失败（该行 `raw_json` 为 NULL），或 `getIngredients()` 与 JSON 兜底都读不出原料。读不出的单个槽位写成 `recipe_inputs.kind = 'custom'`（`ref` 为 NULL）占位，表示「这里有个槽但读不出」。
+- `unparsed` **不影响** `recipe_outputs`：产物独立采集，`getResultItem()` 为空时从 `raw_json` 的 `result` / `results` / `output` 兜底，且只写注册表里真实存在的物品。所以 `unparsed = 1` 的行照样可能有完整产物。
+- 配方的真相源始终是 `raw_json`，结构化槽位是它的投影。查不到想要的东西时读 `raw_json`。
 - 有序合成：`input_width` / `input_height` 有值；`slot` 为行主序（`row × width + col`）。仅 `ShapedRecipe`（含模组子类）填写宽高。
 
 ## 翻译
